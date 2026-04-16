@@ -8,9 +8,10 @@ import { Card, Badge } from "@/app/components/ui/card-badge";
 import { TaskColumn } from "./task-column";
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: "To Do",
-  in_progress: "In Progress",
-  done: "Done",
+  backlog: "Backlog",
+  todo: "Por hacer",
+  in_progress: "En progreso",
+  done: "Completado",
 };
 
 type Props = {
@@ -50,6 +51,7 @@ type Props = {
   onUpdateTaskStatus: (taskId: string, status: TaskStatus) => void;
   onOpenEditor: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
+  onAiGenerate: (title: string) => Promise<string | null>;
 };
 
 export function KanbanBoard({
@@ -89,6 +91,7 @@ export function KanbanBoard({
   onUpdateTaskStatus,
   onOpenEditor,
   onDeleteTask,
+  onAiGenerate,
 }: Props) {
   if (!selectedBoardId) {
     return (
@@ -119,87 +122,13 @@ export function KanbanBoard({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" leftIcon={Calendar}>Calendario</Button>
-           <Button variant="amber" size="sm" leftIcon={Sparkles}>Insights</Button>
-        </div>
+      
       </header>
 
-      {/* Quick Add Task */}
-      <Card className="p-6 border-zinc-200/60 shadow-xl shadow-zinc-200/30">
-        <form className="flex flex-col gap-6" onSubmit={onCreateTask}>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="md:col-span-2 space-y-4">
-              <Input
-                label="Título de la tarea"
-                required
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="¿Qué hay que hacer?"
-                className="font-bold text-base"
-              />
-              <div className="relative group">
-                <Textarea
-                  label="Descripción"
-                  value={newTaskDescription}
-                  onChange={(e) => setNewTaskDescription(e.target.value)}
-                  placeholder="Detalles adicionales..."
-                  className="min-h-[120px] pb-12"
-                />
-                <Button
-                  type="button"
-                  variant="amber"
-                  size="sm"
-                  onClick={onGenerateNewDescription}
-                  disabled={isGeneratingNewDescription || !newTaskTitle.trim()}
-                  className="absolute right-2 bottom-2 h-9 px-3"
-                  leftIcon={Sparkles}
-                >
-                  {isGeneratingNewDescription ? "Pensando..." : "IA"}
-                </Button>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Select
-                  label="Estado inicial"
-                  value={newTaskStatus}
-                  onChange={(e) => setNewTaskStatus(e.target.value as TaskStatus)}
-                  options={[
-                    { label: "Por hacer", value: "todo" },
-                    { label: "En progreso", value: "in_progress" },
-                    { label: "Completado", value: "done" },
-                  ]}
-                />
-                <Select
-                  label="Prioridad"
-                  value={newTaskPriority}
-                  onChange={(e) => setNewTaskPriority(e.target.value as TaskPriority)}
-                  options={[
-                    { label: "Baja", value: "low" },
-                    { label: "Media", value: "medium" },
-                    { label: "Alta", value: "high" },
-                  ]}
-                />
-              </div>
-              <Input
-                label="Fecha de entrega"
-                type="date"
-                value={newTaskDueDate}
-                onChange={(e) => setNewTaskDueDate(e.target.value)}
-              />
-              <Button type="submit" className="w-full" leftIcon={Plus} disabled={!newTaskTitle.trim()}>
-                Crear nueva tarea
-              </Button>
-            </div>
-          </div>
-        </form>
-      </Card>
 
       {/* Columns Grid */}
-      <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
-        {(["todo", "in_progress", "done"] as TaskStatus[]).map((status) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 pb-6">
+        {(["backlog", "todo", "in_progress", "done"] as TaskStatus[]).map((status) => (
           <TaskColumn
             key={status}
             status={status}
@@ -207,6 +136,8 @@ export function KanbanBoard({
             onOpenEditor={onOpenEditor}
             onDeleteTask={onDeleteTask}
             onUpdateStatus={onUpdateTaskStatus}
+            onCreateTask={onCreateTask}
+            onAiGenerate={onAiGenerate}
           />
         ))}
       </div>
@@ -223,7 +154,7 @@ export function KanbanBoard({
       {/* Editor Modal Overlay */}
       {editingTaskId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-zinc-950/20 backdrop-blur-sm">
-          <Card className="w-full max-w-xl p-0 overflow-hidden shadow-2xl shadow-zinc-950/20 border-white/40">
+          <Card className="w-full max-w-lg p-0 overflow-hidden shadow-2xl shadow-zinc-950/20 border-white/40">
             <div className="flex items-center justify-between border-b border-zinc-100 p-4 px-6 bg-zinc-50/50">
                <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-950 text-white">
@@ -271,6 +202,7 @@ export function KanbanBoard({
                   value={editingStatus}
                   onChange={(e) => setEditingStatus(e.target.value as TaskStatus)}
                   options={[
+                    { label: "Backlog", value: "backlog" },
                     { label: "Por hacer", value: "todo" },
                     { label: "En progreso", value: "in_progress" },
                     { label: "Completado", value: "done" },

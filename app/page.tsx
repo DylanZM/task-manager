@@ -84,6 +84,7 @@ export default function Home() {
     handleDeleteTask,
     openEditor,
     saveEditor,
+    handleAiGenerate,
   } = useKanbanLogic();
 
   if (isLoadingAuth) {
@@ -186,6 +187,7 @@ export default function Home() {
             onUpdateTaskStatus={(taskId, status) => void updateTask(taskId, { status })}
             onOpenEditor={openEditor}
             onDeleteTask={(taskId) => void handleDeleteTask(taskId)}
+            onAiGenerate={handleAiGenerate}
           />
         </div>
       </div>

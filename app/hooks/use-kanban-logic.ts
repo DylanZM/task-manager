@@ -62,7 +62,7 @@ const toSafeTasks = (value: unknown): Task[] => {
       typeof task.board_id === "string" &&
       typeof task.title === "string" &&
       (task.description === null || typeof task.description === "string") &&
-      (task.status === "todo" || task.status === "in_progress" || task.status === "done") &&
+      (task.status === "backlog" || task.status === "todo" || task.status === "in_progress" || task.status === "done") &&
       (task.priority === "low" || task.priority === "medium" || task.priority === "high") &&
       (task.due_date === null || typeof task.due_date === "string") &&
       typeof task.position === "number" &&
@@ -180,6 +180,7 @@ export function useKanbanLogic() {
 
   const groupedTasks = useMemo(
     () => ({
+      backlog: tasks.filter((task) => task.status === "backlog"),
       todo: tasks.filter((task) => task.status === "todo"),
       in_progress: tasks.filter((task) => task.status === "in_progress"),
       done: tasks.filter((task) => task.status === "done"),
@@ -276,23 +277,16 @@ export function useKanbanLogic() {
         setAiModelId(envModelId);
         return envModelId;
       }
-      const { data, error } = await client.database
-        .from("ai.configs")
-        .select("model_id, output_modality, is_active")
-        .eq("is_active", true);
-      if (error) {
+      
+      // Fallback: Check metadata via CLI-like scan or just pick first available if allowed
+      // For now, if no env var, we'll try one more time or fail with helpful message
+      if (!envModelId) {
         setTaskError(
-          "No se pudo leer la configuración de IA. Define NEXT_PUBLIC_INSFORGE_AI_MODEL o activa un modelo en InsForge.",
+          "No se encuentra NEXT_PUBLIC_INSFORGE_AI_MODEL. Asegúrate de que .env.local esté configurado correctamente.",
         );
         return null;
       }
-      const model = pickTextModel(toSafeAiConfigs(data));
-      if (!model) {
-        setTaskError("No hay modelos de IA activos con salida de texto en este proyecto.");
-        return null;
-      }
-      setAiModelId(model);
-      return model;
+      return null;
     },
     [aiModelId],
   );
@@ -489,63 +483,75 @@ export function useKanbanLogic() {
     }
   }
 
-  async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleCreateTask(event: FormEvent<HTMLFormElement> | string | { title: string; description?: string; status?: TaskStatus; priority?: TaskPriority }) {
     if (!insforge || !user || !selectedBoardId) return;
+    
+    // Check if it's a form event or direct call
+    const isFormEvent = typeof event === "object" && event !== null && 'preventDefault' in event;
+    const isStatusString = typeof event === "string";
+    const isDataObj = typeof event === "object" && event !== null && 'title' in event;
+
+    if (isFormEvent) {
+      event.preventDefault();
+    }
+
+    const finalStatus: TaskStatus = isStatusString 
+      ? (event as TaskStatus) 
+      : isDataObj 
+      ? ((event as any).status || "todo") 
+      : newTaskStatus;
+
+    const finalTitle = isDataObj ? (event as any).title : newTaskTitle;
+    const finalDescription = isDataObj ? (event as any).description : newTaskDescription;
+    const finalPriority = isDataObj ? (event as any).priority : newTaskPriority;
+    const finalDueDate = isFormEvent ? newTaskDueDate : null;
+
+    const title = finalTitle.trim();
+    if (!title) return;
+
     const nextPosition =
-      tasks.filter((task) => task.status === newTaskStatus).reduce((max, task) => Math.max(max, task.position), 0) + 1;
+      tasks.filter((task) => task.status === finalStatus).reduce((max, task) => Math.max(max, task.position), 0) + 1;
+
     const payload = {
       user_id: user.id,
       board_id: selectedBoardId,
-      title: newTaskTitle.trim(),
-      description: newTaskDescription.trim() || null,
-      status: newTaskStatus,
-      priority: newTaskPriority,
-      due_date: newTaskDueDate ? new Date(newTaskDueDate).toISOString() : null,
+      title,
+      description: finalDescription?.trim() || null,
+      status: finalStatus,
+      priority: finalPriority || "medium",
+      due_date: finalDueDate ? new Date(finalDueDate).toISOString() : null,
       position: nextPosition,
     };
+
     const { data, error } = await insforge.database.from("tasks").insert([payload]).select();
     if (error) {
       setTaskError(error.message);
       return;
     }
+
     setTasks((prev) => [...prev, ...toSafeTasks(data)]);
-    setNewTaskTitle("");
-    setNewTaskDescription("");
-    setNewTaskStatus("todo");
-    setNewTaskPriority("medium");
-    setNewTaskDueDate("");
+    
+    if (!isDataObj && !isStatusString) {
+      setNewTaskTitle("");
+      setNewTaskDescription("");
+      setNewTaskStatus("todo");
+      setNewTaskPriority("medium");
+      setNewTaskDueDate("");
+    }
   }
 
-  async function generateTaskDescription(mode: "new" | "edit") {
-    if (!insforge) return;
-    const title = (mode === "new" ? newTaskTitle : editingTitle).trim();
-    if (!title) {
-      setTaskError("Escribe un título para generar la descripción con IA.");
-      return;
-    }
-    if (mode === "new") {
-      setIsGeneratingNewDescription(true);
-    } else {
-      setIsGeneratingEditingDescription(true);
-    }
-    setTaskError("");
+  async function handleAiGenerate(title: string): Promise<string | null> {
+    if (!insforge || !title.trim()) return null;
     const model = await resolveAiModel(insforge);
-    if (!model) {
-      setIsGeneratingNewDescription(false);
-      setIsGeneratingEditingDescription(false);
-      return;
-    }
+    if (!model) return null;
 
-    let response: unknown;
     try {
-      response = await insforge.ai.chat.completions.create({
+      const response = await insforge.ai.chat.completions.create({
         model,
         messages: [
           {
             role: "system",
-            content:
-              "Eres un asistente de productividad. Responde con una sola descripción breve en español, clara y accionable, sin listas.",
+            content: "Eres un asistente de productividad. Responde con una sola descripción breve en español, clara y accionable, sin listas.",
           },
           {
             role: "user",
@@ -555,40 +561,40 @@ export function useKanbanLogic() {
         temperature: 0.4,
         maxTokens: 180,
       });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al generar descripción con IA.";
-      setTaskError(message);
-      setIsGeneratingNewDescription(false);
-      setIsGeneratingEditingDescription(false);
-      return;
-    }
 
-    const responseError = (
-      response as {
-        error?: { message?: string };
+      const responseError = (response as any)?.error;
+      if (responseError) {
+        setTaskError(responseError.message ?? "Error en la IA.");
+        return null;
       }
-    )?.error;
-    if (responseError) {
-      setTaskError(responseError.message ?? "No se pudo generar la descripción con IA.");
-      setIsGeneratingNewDescription(false);
-      setIsGeneratingEditingDescription(false);
+
+      return extractCompletionText(response);
+    } catch (error) {
+      setTaskError(error instanceof Error ? error.message : "Error al generar con IA.");
+      return null;
+    }
+  }
+
+  async function generateTaskDescription(mode: "new" | "edit") {
+    const title = (mode === "new" ? newTaskTitle : editingTitle).trim();
+    if (!title) {
+      setTaskError("Escribe un título para generar la descripción con IA.");
       return;
     }
 
-    const description = extractCompletionText(response);
-    if (!description) {
-      setTaskError("La IA no devolvió texto. Reintenta con otro título.");
-      setIsGeneratingNewDescription(false);
-      setIsGeneratingEditingDescription(false);
-      return;
+    if (mode === "new") setIsGeneratingNewDescription(true);
+    else setIsGeneratingEditingDescription(true);
+    
+    setTaskError("");
+    const description = await handleAiGenerate(title);
+    
+    if (description) {
+      if (mode === "new") setNewTaskDescription(description);
+      else setEditingDescription(description);
     }
-    if (mode === "new") {
-      setNewTaskDescription(description);
-      setIsGeneratingNewDescription(false);
-      return;
-    }
-    setEditingDescription(description);
-    setIsGeneratingEditingDescription(false);
+
+    if (mode === "new") setIsGeneratingNewDescription(false);
+    else setIsGeneratingEditingDescription(false);
   }
 
   async function updateTask(taskId: string, update: Partial<Task>) {
@@ -730,5 +736,6 @@ export function useKanbanLogic() {
     handleDeleteTask,
     openEditor,
     saveEditor,
+    handleAiGenerate,
   };
 }
