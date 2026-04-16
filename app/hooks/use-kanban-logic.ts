@@ -1,0 +1,734 @@
+"use client";
+
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { getInsforgeClient } from "@/lib/insforge/client";
+import { AuthConfig, Board, Task, TaskPriority, TaskStatus } from "@/lib/task-types";
+
+export type AuthMode = "login" | "register";
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name?: string | null;
+}
+
+interface AiConfigRow {
+  model_id: string;
+  output_modality: string[] | string | null;
+}
+
+const DEFAULT_AUTH_CONFIG: AuthConfig = {
+  requireEmailVerification: false,
+  passwordMinLength: 8,
+  verifyEmailMethod: "code",
+  resetPasswordMethod: "link",
+  oAuthProviders: [],
+};
+
+const toSafeUser = (value: unknown): AuthUser | null => {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as { id?: unknown; email?: unknown; name?: unknown };
+  if (typeof candidate.id !== "string" || typeof candidate.email !== "string") return null;
+  return {
+    id: candidate.id,
+    email: candidate.email,
+    name: typeof candidate.name === "string" ? candidate.name : null,
+  };
+};
+
+const toSafeBoards = (value: unknown): Board[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is Board => {
+    if (!item || typeof item !== "object") return false;
+    const board = item as Partial<Board>;
+    return (
+      typeof board.id === "string" &&
+      typeof board.user_id === "string" &&
+      typeof board.name === "string" &&
+      typeof board.created_at === "string" &&
+      typeof board.updated_at === "string"
+    );
+  });
+};
+
+const toSafeTasks = (value: unknown): Task[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is Task => {
+    if (!item || typeof item !== "object") return false;
+    const task = item as Partial<Task>;
+    return (
+      typeof task.id === "string" &&
+      typeof task.user_id === "string" &&
+      typeof task.board_id === "string" &&
+      typeof task.title === "string" &&
+      (task.description === null || typeof task.description === "string") &&
+      (task.status === "todo" || task.status === "in_progress" || task.status === "done") &&
+      (task.priority === "low" || task.priority === "medium" || task.priority === "high") &&
+      (task.due_date === null || typeof task.due_date === "string") &&
+      typeof task.position === "number" &&
+      typeof task.created_at === "string" &&
+      typeof task.updated_at === "string"
+    );
+  });
+};
+
+const toSafeAiConfigs = (value: unknown): AiConfigRow[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item) => {
+      const model_id = typeof item.model_id === "string" ? item.model_id : "";
+      const output_modality =
+        typeof item.output_modality === "string" || Array.isArray(item.output_modality)
+          ? item.output_modality
+          : null;
+      return { model_id, output_modality };
+    })
+    .filter((item) => item.model_id.length > 0);
+};
+
+const pickTextModel = (configs: AiConfigRow[]) => {
+  for (const config of configs) {
+    if (Array.isArray(config.output_modality) && config.output_modality.includes("text")) {
+      return config.model_id;
+    }
+    if (typeof config.output_modality === "string" && config.output_modality.includes("text")) {
+      return config.model_id;
+    }
+  }
+  return configs[0]?.model_id ?? null;
+};
+
+const extractCompletionText = (value: unknown) => {
+  if (!value || typeof value !== "object") return "";
+  const candidate = value as {
+    choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }>;
+  };
+  const content = candidate.choices?.[0]?.message?.content;
+  if (typeof content === "string") return content.trim();
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => (item && typeof item === "object" && item.type === "text" ? item.text ?? "" : ""))
+      .join(" ")
+      .trim();
+  }
+  return "";
+};
+
+const toDateInputValue = (isoDate: string | null) => (isoDate ? isoDate.slice(0, 10) : "");
+
+export function useKanbanLogic() {
+  const [insforgeInit] = useState(() => {
+    try {
+      return { client: getInsforgeClient(), error: "" };
+    } catch (error) {
+      return {
+        client: null,
+        error: error instanceof Error ? error.message : "Invalid InsForge configuration.",
+      };
+    }
+  });
+  const insforge = insforgeInit.client;
+
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [authConfig, setAuthConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(Boolean(insforge));
+  const [authMessage, setAuthMessage] = useState("");
+  const [authError, setAuthError] = useState(insforgeInit.error);
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState("");
+  const [verificationMethod, setVerificationMethod] = useState<"code" | "link">("code");
+
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+  const [newBoardName, setNewBoardName] = useState("");
+  const [isCreatingBoard, setIsCreatingBoard] = useState(false);
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [taskError, setTaskError] = useState("");
+  const [aiModelId, setAiModelId] = useState<string | null>(
+    process.env.NEXT_PUBLIC_INSFORGE_AI_MODEL?.trim() || null,
+  );
+  const [isGeneratingNewDescription, setIsGeneratingNewDescription] = useState(false);
+  const [isGeneratingEditingDescription, setIsGeneratingEditingDescription] = useState(false);
+
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>("todo");
+  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("medium");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
+
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingDescription, setEditingDescription] = useState("");
+  const [editingStatus, setEditingStatus] = useState<TaskStatus>("todo");
+  const [editingPriority, setEditingPriority] = useState<TaskPriority>("medium");
+  const [editingDueDate, setEditingDueDate] = useState("");
+
+  const selectedBoard = useMemo(
+    () => boards.find((board) => board.id === selectedBoardId) ?? null,
+    [boards, selectedBoardId],
+  );
+
+  const groupedTasks = useMemo(
+    () => ({
+      todo: tasks.filter((task) => task.status === "todo"),
+      in_progress: tasks.filter((task) => task.status === "in_progress"),
+      done: tasks.filter((task) => task.status === "done"),
+    }),
+    [tasks],
+  );
+
+  const fetchAuthConfig = useCallback(async () => {
+    const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL;
+    if (!baseUrl) return;
+    const response = await fetch(`${baseUrl}/api/auth/public-config`);
+    if (!response.ok) throw new Error("Failed to load auth configuration.");
+    const config = (await response.json()) as Partial<AuthConfig>;
+    setAuthConfig({
+      requireEmailVerification: Boolean(config.requireEmailVerification),
+      passwordMinLength:
+        typeof config.passwordMinLength === "number"
+          ? config.passwordMinLength
+          : DEFAULT_AUTH_CONFIG.passwordMinLength,
+      verifyEmailMethod: config.verifyEmailMethod === "link" ? "link" : "code",
+      resetPasswordMethod: config.resetPasswordMethod === "code" ? "code" : "link",
+      oAuthProviders: Array.isArray(config.oAuthProviders)
+        ? config.oAuthProviders.filter((provider): provider is string => typeof provider === "string")
+        : [],
+    });
+  }, []);
+
+  const loadCurrentUser = useCallback(async (client: ReturnType<typeof getInsforgeClient>) => {
+    const { data, error } = await client.auth.getCurrentUser();
+    if (error) {
+      setUser(null);
+      return null;
+    }
+    const currentUser = toSafeUser(data?.user);
+    setUser(currentUser);
+    return currentUser;
+  }, []);
+
+  const loadBoards = useCallback(async (client: ReturnType<typeof getInsforgeClient>, userId: string) => {
+    const { data, error } = await client.database
+      .from("boards")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+    if (error) {
+      setTaskError(error.message);
+      return [] as Board[];
+    }
+    return toSafeBoards(data);
+  }, []);
+
+  const loadTasks = useCallback(
+    async (client: ReturnType<typeof getInsforgeClient>, userId: string, boardId: string) => {
+      setIsLoadingTasks(true);
+      const { data, error } = await client.database
+        .from("tasks")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("board_id", boardId)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true });
+      setIsLoadingTasks(false);
+      if (error) {
+        setTaskError(error.message);
+        return;
+      }
+      setTasks(toSafeTasks(data));
+    },
+    [],
+  );
+
+  const ensureProfile = useCallback(async (client: ReturnType<typeof getInsforgeClient>, currentUser: AuthUser) => {
+    const { data, error } = await client.database
+      .from("profiles")
+      .select("user_id")
+      .eq("user_id", currentUser.id)
+      .limit(1);
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    if (Array.isArray(data) && data.length > 0) return;
+    const { error: insertError } = await client.database.from("profiles").insert([
+      { user_id: currentUser.id, display_name: currentUser.name ?? null, avatar_url: null },
+    ]);
+    if (insertError) setTaskError(insertError.message);
+  }, []);
+
+  const resolveAiModel = useCallback(
+    async (client: ReturnType<typeof getInsforgeClient>) => {
+      if (aiModelId) return aiModelId;
+      const envModelId = process.env.NEXT_PUBLIC_INSFORGE_AI_MODEL?.trim();
+      if (envModelId) {
+        setAiModelId(envModelId);
+        return envModelId;
+      }
+      const { data, error } = await client.database
+        .from("ai.configs")
+        .select("model_id, output_modality, is_active")
+        .eq("is_active", true);
+      if (error) {
+        setTaskError(
+          "No se pudo leer la configuración de IA. Define NEXT_PUBLIC_INSFORGE_AI_MODEL o activa un modelo en InsForge.",
+        );
+        return null;
+      }
+      const model = pickTextModel(toSafeAiConfigs(data));
+      if (!model) {
+        setTaskError("No hay modelos de IA activos con salida de texto en este proyecto.");
+        return null;
+      }
+      setAiModelId(model);
+      return model;
+    },
+    [aiModelId],
+  );
+
+  const loadBoardsAndTasks = useCallback(
+    async (client: ReturnType<typeof getInsforgeClient>, currentUser: AuthUser) => {
+      const existingBoards = await loadBoards(client, currentUser.id);
+      setBoards(existingBoards);
+      const boardId = existingBoards[0]?.id ?? null;
+      setSelectedBoardId(boardId);
+      if (boardId) {
+        await loadTasks(client, currentUser.id, boardId);
+      } else {
+        setTasks([]);
+      }
+    },
+    [loadBoards, loadTasks],
+  );
+
+  useEffect(() => {
+    if (!insforge) return;
+    void (async () => {
+      try {
+        await fetchAuthConfig();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load auth config.";
+        setAuthError(message);
+      }
+      const currentUser = await loadCurrentUser(insforge);
+      if (currentUser) {
+        await ensureProfile(insforge, currentUser);
+        await loadBoardsAndTasks(insforge, currentUser);
+      }
+      setIsLoadingAuth(false);
+    })();
+  }, [ensureProfile, fetchAuthConfig, insforge, loadBoardsAndTasks, loadCurrentUser]);
+
+  async function handleRegister(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!insforge) return;
+    setAuthError("");
+    setAuthMessage("");
+    setIsSubmittingAuth(true);
+    const { data, error } = await insforge.auth.signUp({
+      email,
+      password,
+      name: displayName || undefined,
+      redirectTo: `${window.location.origin}/`,
+    });
+    setIsSubmittingAuth(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (data?.requireEmailVerification) {
+      const method = authConfig.verifyEmailMethod;
+      setVerificationMethod(method);
+      setPendingVerificationEmail(email);
+      setAuthMessage(method === "link" ? "Revisa tu correo y luego inicia sesión." : "Ingresa el código de verificación.");
+      if (method === "link") setAuthMode("login");
+      return;
+    }
+    const signedUpUser = toSafeUser(data?.user);
+    setUser(signedUpUser);
+    if (signedUpUser) {
+      await ensureProfile(insforge, signedUpUser);
+      await loadBoardsAndTasks(insforge, signedUpUser);
+    }
+  }
+
+  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!insforge || !pendingVerificationEmail) return;
+    setAuthError("");
+    setIsSubmittingAuth(true);
+    const { data, error } = await insforge.auth.verifyEmail({
+      email: pendingVerificationEmail,
+      otp: verificationCode,
+    });
+    setIsSubmittingAuth(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    const verifiedUser = toSafeUser(data?.user);
+    setUser(verifiedUser);
+    if (verifiedUser) {
+      await ensureProfile(insforge, verifiedUser);
+      await loadBoardsAndTasks(insforge, verifiedUser);
+    }
+    setVerificationCode("");
+    setPendingVerificationEmail("");
+  }
+
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!insforge) return;
+    setAuthError("");
+    setAuthMessage("");
+    setIsSubmittingAuth(true);
+    const { data, error } = await insforge.auth.signInWithPassword({ email, password });
+    setIsSubmittingAuth(false);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    const signedInUser = toSafeUser(data?.user);
+    setUser(signedInUser);
+    if (signedInUser) {
+      await ensureProfile(insforge, signedInUser);
+      await loadBoardsAndTasks(insforge, signedInUser);
+    }
+  }
+
+  async function handleOAuthSignIn(provider: "github" | "google") {
+    if (!insforge) return;
+    setAuthError("");
+    setAuthMessage("");
+    setIsOAuthLoading(true);
+    const { error } = await insforge.auth.signInWithOAuth({
+      provider,
+      redirectTo: `${window.location.origin}/`,
+    });
+    if (error) {
+      setAuthError(error.message);
+      setIsOAuthLoading(false);
+    }
+  }
+
+  async function handleSignOut() {
+    if (!insforge) return;
+    const { error } = await insforge.auth.signOut();
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    setUser(null);
+    setBoards([]);
+    setSelectedBoardId(null);
+    setTasks([]);
+    setEditingTaskId(null);
+  }
+
+  async function handleCreateBoard(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!insforge || !user) return;
+    const boardName = newBoardName.trim();
+    if (!boardName) return;
+    setIsCreatingBoard(true);
+    const { data, error } = await insforge.database
+      .from("boards")
+      .insert([{ user_id: user.id, name: boardName }])
+      .select();
+    setIsCreatingBoard(false);
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    const created = toSafeBoards(data)[0];
+    if (!created) return;
+    setBoards((prev) => [...prev, created]);
+    setSelectedBoardId(created.id);
+    setTasks([]);
+    setNewBoardName("");
+  }
+
+  async function switchBoard(boardId: string) {
+    if (!insforge || !user) return;
+    setSelectedBoardId(boardId);
+    await loadTasks(insforge, user.id, boardId);
+  }
+
+  async function handleDeleteBoard(boardId: string) {
+    if (!insforge || !user) return;
+    const { error } = await insforge.database
+      .from("boards")
+      .delete()
+      .eq("id", boardId)
+      .eq("user_id", user.id);
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    const nextBoards = boards.filter((board) => board.id !== boardId);
+    setBoards(nextBoards);
+    if (selectedBoardId === boardId) {
+      const nextBoardId = nextBoards[0]?.id ?? null;
+      setSelectedBoardId(nextBoardId);
+      if (nextBoardId) {
+        await loadTasks(insforge, user.id, nextBoardId);
+      } else {
+        setTasks([]);
+      }
+    }
+  }
+
+  async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!insforge || !user || !selectedBoardId) return;
+    const nextPosition =
+      tasks.filter((task) => task.status === newTaskStatus).reduce((max, task) => Math.max(max, task.position), 0) + 1;
+    const payload = {
+      user_id: user.id,
+      board_id: selectedBoardId,
+      title: newTaskTitle.trim(),
+      description: newTaskDescription.trim() || null,
+      status: newTaskStatus,
+      priority: newTaskPriority,
+      due_date: newTaskDueDate ? new Date(newTaskDueDate).toISOString() : null,
+      position: nextPosition,
+    };
+    const { data, error } = await insforge.database.from("tasks").insert([payload]).select();
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    setTasks((prev) => [...prev, ...toSafeTasks(data)]);
+    setNewTaskTitle("");
+    setNewTaskDescription("");
+    setNewTaskStatus("todo");
+    setNewTaskPriority("medium");
+    setNewTaskDueDate("");
+  }
+
+  async function generateTaskDescription(mode: "new" | "edit") {
+    if (!insforge) return;
+    const title = (mode === "new" ? newTaskTitle : editingTitle).trim();
+    if (!title) {
+      setTaskError("Escribe un título para generar la descripción con IA.");
+      return;
+    }
+    if (mode === "new") {
+      setIsGeneratingNewDescription(true);
+    } else {
+      setIsGeneratingEditingDescription(true);
+    }
+    setTaskError("");
+    const model = await resolveAiModel(insforge);
+    if (!model) {
+      setIsGeneratingNewDescription(false);
+      setIsGeneratingEditingDescription(false);
+      return;
+    }
+
+    let response: unknown;
+    try {
+      response = await insforge.ai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Eres un asistente de productividad. Responde con una sola descripción breve en español, clara y accionable, sin listas.",
+          },
+          {
+            role: "user",
+            content: `Título de la tarea: ${title}. Genera una descripción útil para un tablero Kanban profesional.`,
+          },
+        ],
+        temperature: 0.4,
+        maxTokens: 180,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error al generar descripción con IA.";
+      setTaskError(message);
+      setIsGeneratingNewDescription(false);
+      setIsGeneratingEditingDescription(false);
+      return;
+    }
+
+    const responseError = (
+      response as {
+        error?: { message?: string };
+      }
+    )?.error;
+    if (responseError) {
+      setTaskError(responseError.message ?? "No se pudo generar la descripción con IA.");
+      setIsGeneratingNewDescription(false);
+      setIsGeneratingEditingDescription(false);
+      return;
+    }
+
+    const description = extractCompletionText(response);
+    if (!description) {
+      setTaskError("La IA no devolvió texto. Reintenta con otro título.");
+      setIsGeneratingNewDescription(false);
+      setIsGeneratingEditingDescription(false);
+      return;
+    }
+    if (mode === "new") {
+      setNewTaskDescription(description);
+      setIsGeneratingNewDescription(false);
+      return;
+    }
+    setEditingDescription(description);
+    setIsGeneratingEditingDescription(false);
+  }
+
+  async function updateTask(taskId: string, update: Partial<Task>) {
+    if (!insforge || !user) return;
+    const dbUpdate: Record<string, unknown> = {};
+    if (typeof update.title === "string") dbUpdate.title = update.title.trim();
+    if (update.description !== undefined) dbUpdate.description = update.description?.trim() || null;
+    if (update.status) dbUpdate.status = update.status;
+    if (update.priority) dbUpdate.priority = update.priority;
+    if (update.position !== undefined) dbUpdate.position = update.position;
+    if (update.due_date !== undefined) dbUpdate.due_date = update.due_date;
+    const { data, error } = await insforge.database
+      .from("tasks")
+      .update(dbUpdate)
+      .eq("id", taskId)
+      .eq("user_id", user.id)
+      .select();
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    const updated = toSafeTasks(data)[0];
+    if (!updated) return;
+    setTasks((prev) => prev.map((task) => (task.id === taskId ? updated : task)));
+  }
+
+  async function handleDeleteTask(taskId: string) {
+    if (!insforge || !user) return;
+    const { error } = await insforge.database
+      .from("tasks")
+      .delete()
+      .eq("id", taskId)
+      .eq("user_id", user.id);
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    setTasks((prev) => prev.filter((task) => task.id !== taskId));
+  }
+
+  function openEditor(task: Task) {
+    setEditingTaskId(task.id);
+    setEditingTitle(task.title);
+    setEditingDescription(task.description ?? "");
+    setEditingStatus(task.status);
+    setEditingPriority(task.priority);
+    setEditingDueDate(toDateInputValue(task.due_date));
+  }
+
+  async function saveEditor(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingTaskId) return;
+    await updateTask(editingTaskId, {
+      title: editingTitle,
+      description: editingDescription,
+      status: editingStatus,
+      priority: editingPriority,
+      due_date: editingDueDate ? new Date(editingDueDate).toISOString() : null,
+    });
+    setEditingTaskId(null);
+  }
+
+  return {
+    // Auth State
+    authMode,
+    setAuthMode,
+    authConfig,
+    isLoadingAuth,
+    authMessage,
+    authError,
+    isSubmittingAuth,
+    isOAuthLoading,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    displayName,
+    setDisplayName,
+    verificationCode,
+    setVerificationCode,
+    pendingVerificationEmail,
+    verificationMethod,
+    user,
+
+    // Board State
+    boards,
+    selectedBoard,
+    selectedBoardId,
+    newBoardName,
+    setNewBoardName,
+    isCreatingBoard,
+
+    // Task State
+    tasks,
+    groupedTasks,
+    isLoadingTasks,
+    taskError,
+    isGeneratingNewDescription,
+    isGeneratingEditingDescription,
+
+    // New Task State
+    newTaskTitle,
+    setNewTaskTitle,
+    newTaskDescription,
+    setNewTaskDescription,
+    newTaskStatus,
+    setNewTaskStatus,
+    newTaskPriority,
+    setNewTaskPriority,
+    newTaskDueDate,
+    setNewTaskDueDate,
+
+    // Editing State
+    editingTaskId,
+    setEditingTaskId,
+    editingTitle,
+    setEditingTitle,
+    editingDescription,
+    setEditingDescription,
+    editingStatus,
+    setEditingStatus,
+    editingPriority,
+    setEditingPriority,
+    editingDueDate,
+    setEditingDueDate,
+
+    // Actions
+    handleRegister,
+    handleVerifyCode,
+    handleLogin,
+    handleOAuthSignIn,
+    handleSignOut,
+    handleCreateBoard,
+    switchBoard,
+    handleDeleteBoard,
+    handleCreateTask,
+    generateTaskDescription,
+    updateTask,
+    handleDeleteTask,
+    openEditor,
+    saveEditor,
+  };
+}

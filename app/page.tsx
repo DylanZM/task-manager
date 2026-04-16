@@ -1,65 +1,194 @@
-import Image from "next/image";
+"use client";
+
+import { AuthScreen } from "@/app/components/kanban/auth-screen";
+import { BoardSidebar } from "@/app/components/kanban/board-sidebar";
+import { KanbanBoard } from "@/app/components/kanban/kanban-board";
+import { useKanbanLogic } from "@/app/hooks/use-kanban-logic";
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+  const {
+    // Auth State
+    authMode,
+    setAuthMode,
+    authConfig,
+    isLoadingAuth,
+    authMessage,
+    authError,
+    isSubmittingAuth,
+    isOAuthLoading,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    displayName,
+    setDisplayName,
+    verificationCode,
+    setVerificationCode,
+    pendingVerificationEmail,
+    verificationMethod,
+    user,
+
+    // Board State
+    boards,
+    selectedBoard,
+    selectedBoardId,
+    newBoardName,
+    setNewBoardName,
+    isCreatingBoard,
+
+    // Task State
+    groupedTasks,
+    isLoadingTasks,
+    taskError,
+    isGeneratingNewDescription,
+    isGeneratingEditingDescription,
+
+    // New Task State
+    newTaskTitle,
+    setNewTaskTitle,
+    newTaskDescription,
+    setNewTaskDescription,
+    newTaskStatus,
+    setNewTaskStatus,
+    newTaskPriority,
+    setNewTaskPriority,
+    newTaskDueDate,
+    setNewTaskDueDate,
+
+    // Editing State
+    editingTaskId,
+    setEditingTaskId,
+    editingTitle,
+    setEditingTitle,
+    editingDescription,
+    setEditingDescription,
+    editingStatus,
+    setEditingStatus,
+    editingPriority,
+    setEditingPriority,
+    editingDueDate,
+    setEditingDueDate,
+
+    // Actions
+    handleRegister,
+    handleVerifyCode,
+    handleLogin,
+    handleOAuthSignIn,
+    handleSignOut,
+    handleCreateBoard,
+    switchBoard,
+    handleDeleteBoard,
+    handleCreateTask,
+    generateTaskDescription,
+    updateTask,
+    handleDeleteTask,
+    openEditor,
+    saveEditor,
+  } = useKanbanLogic();
+
+  if (isLoadingAuth) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-100/50 backdrop-blur-sm text-zinc-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950" />
+          <p className="rounded-xl border border-zinc-200 bg-white/80 px-4 py-2 text-sm font-medium shadow-sm backdrop-blur-md">
+            Cargando...
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
       </main>
-    </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AuthScreen
+        authMode={authMode}
+        setAuthMode={setAuthMode}
+        needsVerificationCode={Boolean(pendingVerificationEmail && verificationMethod === "code")}
+        verificationCode={verificationCode}
+        setVerificationCode={setVerificationCode}
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        displayName={displayName}
+        setDisplayName={setDisplayName}
+        minPasswordLength={authConfig.passwordMinLength}
+        authMessage={authMessage}
+        authError={authError}
+        isSubmittingAuth={isSubmittingAuth}
+        isOAuthLoading={isOAuthLoading}
+        oauthProviders={authConfig.oAuthProviders.filter(
+          (provider): provider is "github" | "google" =>
+            provider === "github" || provider === "google",
+        )}
+        onRegister={handleRegister}
+        onLogin={handleLogin}
+        onVerifyCode={handleVerifyCode}
+        onOAuth={(provider) => void handleOAuthSignIn(provider)}
+      />
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-zinc-50 text-zinc-950 selection:bg-zinc-950 selection:text-white">
+      <div className="mx-auto w-full max-w-[1440px] grid grid-cols-1 gap-8 p-6 lg:grid-cols-[280px_1fr] lg:p-10 lg:gap-12">
+        <div className="min-w-0">
+          <BoardSidebar
+            boards={boards}
+            selectedBoardId={selectedBoardId}
+            newBoardName={newBoardName}
+            setNewBoardName={setNewBoardName}
+            isCreatingBoard={isCreatingBoard}
+            taskError={taskError}
+            onCreateBoard={handleCreateBoard}
+            onSwitchBoard={(boardId) => void switchBoard(boardId)}
+            onDeleteBoard={(boardId) => void handleDeleteBoard(boardId)}
+            onSignOut={() => void handleSignOut()}
+          />
+        </div>
+
+        <div className="min-w-0">
+          <KanbanBoard
+            userEmail={user.email}
+            selectedBoard={selectedBoard}
+            selectedBoardId={selectedBoardId}
+            newTaskTitle={newTaskTitle}
+            setNewTaskTitle={setNewTaskTitle}
+            newTaskDescription={newTaskDescription}
+            setNewTaskDescription={setNewTaskDescription}
+            newTaskStatus={newTaskStatus}
+            setNewTaskStatus={setNewTaskStatus}
+            newTaskPriority={newTaskPriority}
+            setNewTaskPriority={setNewTaskPriority}
+            newTaskDueDate={newTaskDueDate}
+            setNewTaskDueDate={setNewTaskDueDate}
+            editingTaskId={editingTaskId}
+            editingTitle={editingTitle}
+            setEditingTitle={setEditingTitle}
+            editingDescription={editingDescription}
+            setEditingDescription={setEditingDescription}
+            editingStatus={editingStatus}
+            setEditingStatus={setEditingStatus}
+            editingPriority={editingPriority}
+            setEditingPriority={setEditingPriority}
+            editingDueDate={editingDueDate}
+            setEditingDueDate={setEditingDueDate}
+            groupedTasks={groupedTasks}
+            isLoadingTasks={isLoadingTasks}
+            isGeneratingNewDescription={isGeneratingNewDescription}
+            isGeneratingEditingDescription={isGeneratingEditingDescription}
+            onCreateTask={handleCreateTask}
+            onSaveEditor={saveEditor}
+            onCloseEditor={() => setEditingTaskId(null)}
+            onGenerateNewDescription={() => void generateTaskDescription("new")}
+            onGenerateEditingDescription={() => void generateTaskDescription("edit")}
+            onUpdateTaskStatus={(taskId, status) => void updateTask(taskId, { status })}
+            onOpenEditor={openEditor}
+            onDeleteTask={(taskId) => void handleDeleteTask(taskId)}
+          />
+        </div>
+      </div>
+    </main>
   );
 }
