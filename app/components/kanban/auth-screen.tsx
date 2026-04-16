@@ -59,7 +59,7 @@ export function AuthScreen({
       {/* Background Decoration */}
       <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-zinc-200/50 blur-3xl" />
       <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-zinc-200/50 blur-3xl" />
-      
+
       <div className="relative z-10 w-full max-w-[420px]">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-950 text-white shadow-xl shadow-zinc-200">
@@ -72,20 +72,20 @@ export function AuthScreen({
         </div>
 
         <Card className="overflow-hidden border-zinc-200/60 p-8 shadow-xl shadow-zinc-200/50">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-zinc-950">
+          <div className="mb-8 text-center">
+            <h2 className="text-2xl font-black text-zinc-950">
               {needsVerificationCode
                 ? "Verifica tu correo"
                 : authMode === "login"
-                ? "Bienvenido de nuevo"
-                : "Crea tu cuenta"}
+                  ? "Bienvenido de nuevo"
+                  : "Crea tu cuenta"}
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-2 text-sm font-medium text-zinc-500">
               {needsVerificationCode
                 ? "Hemos enviado un código a tu email"
                 : authMode === "login"
-                ? "Ingresa tus credenciales para continuar"
-                : "Únete a la plataforma de gestión más avanzada"}
+                  ? "Ingresa tus credenciales para continuar"
+                  : "Únete a la plataforma de gestión más avanzada"}
             </p>
           </div>
 
@@ -111,7 +111,7 @@ export function AuthScreen({
                 label="Código de verificación"
                 required
                 value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVerificationCode(e.target.value)}
                 placeholder="123456"
                 type="text"
                 className="text-center text-lg tracking-[0.5em] font-mono"
@@ -122,15 +122,15 @@ export function AuthScreen({
             </form>
           ) : (
             <>
-              <form 
-                className="space-y-4" 
+              <form
+                className="space-y-4"
                 onSubmit={authMode === "login" ? onLogin : onRegister}
               >
                 {authMode === "register" && (
                   <Input
                     label="Nombre completo"
                     value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDisplayName(e.target.value)}
                     placeholder="John Doe"
                     type="text"
                   />
@@ -141,7 +141,7 @@ export function AuthScreen({
                   type="email"
                   autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   placeholder="nombre@ejemplo.com"
                 />
                 <Input
@@ -151,10 +151,10 @@ export function AuthScreen({
                   minLength={minPasswordLength}
                   autoComplete={authMode === "login" ? "current-password" : "new-password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   placeholder="••••••••"
                 />
-                
+
                 <Button type="submit" isLoading={isSubmittingAuth} className="w-full">
                   {authMode === "login" ? "Iniciar sesión" : "Crear cuenta"}
                 </Button>
@@ -170,7 +170,7 @@ export function AuthScreen({
                       <span className="bg-white px-2 text-zinc-500 font-medium">O continúa con</span>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     {oauthProviders.includes("github") && (
                       <Button
@@ -206,8 +206,8 @@ export function AuthScreen({
               onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}
               className="text-sm font-medium text-zinc-600 hover:text-zinc-950 transition-colors"
             >
-              {authMode === "login" 
-                ? "¿No tienes una cuenta? Regístrate" 
+              {authMode === "login"
+                ? "¿No tienes una cuenta? Regístrate"
                 : "¿Ya tienes cuenta? Inicia sesión"}
             </button>
           </div>

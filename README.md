@@ -8,6 +8,7 @@ Kanban-style task manager built with Next.js and InsForge, including:
 - Board-based Kanban workflow (create board, then manage tasks per board)
 - Task CRUD (create, edit, move between columns, delete)
 - AI task description generation from task title
+- Real-time task synchronization by board (status and changes across open clients)
 - Persistent tasks in InsForge Postgres with RLS per user
 
 ## 1. Install dependencies
@@ -61,7 +62,8 @@ Open `http://localhost:3000`.
 ## Notes
 
 - Auth UI reads InsForge public auth config from `/api/auth/public-config` to align with backend settings.
-- Task description AI generation uses `insforge.ai.chat.completions.create` and reads active models from `ai.configs` when `NEXT_PUBLIC_INSFORGE_AI_MODEL` is not set.
+- Task description AI generation uses `insforge.ai.chat.completions.create` with **GPT-5 mini** (`NEXT_PUBLIC_INSFORGE_AI_MODEL` if it points to GPT-5 mini, otherwise fallback to `openai/gpt-5-mini`).
+- Real-time sync uses InsForge channels (`board:%`) plus DB trigger publish via `realtime.publish` from `tasks` changes.
 - If verification method is `code`, users can verify directly in the app.
 - If verification method is `link`, users receive a verification link and then sign in.
 - Current backend auth metadata: email verification required, verify method `code`, reset method `code`, OAuth providers: GitHub and Google.

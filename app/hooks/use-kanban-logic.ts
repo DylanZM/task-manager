@@ -3,6 +3,14 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { getInsforgeClient } from "@/lib/insforge/client";
 import { AuthConfig, Board, Task, TaskPriority, TaskStatus } from "@/lib/task-types";
+import {
+  buildFallbackDescription,
+  buildTaskDescriptionMessages,
+  extractCompletionText,
+  isUsableDescription,
+  resolveTaskDescriptionModel,
+} from "@/lib/insforge/ai-task-description";
+import { isRealtimePayloadForBoard } from "@/lib/insforge/realtime-board-events";
 
 export type AuthMode = "login" | "register";
 
@@ -12,9 +20,11 @@ export interface AuthUser {
   name?: string | null;
 }
 
-interface AiConfigRow {
-  model_id: string;
-  output_modality: string[] | string | null;
+interface QuickTaskInput {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
 }
 
 const DEFAULT_AUTH_CONFIG: AuthConfig = {
@@ -70,49 +80,6 @@ const toSafeTasks = (value: unknown): Task[] => {
       typeof task.updated_at === "string"
     );
   });
-};
-
-const toSafeAiConfigs = (value: unknown): AiConfigRow[] => {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
-    .map((item) => {
-      const model_id = typeof item.model_id === "string" ? item.model_id : "";
-      const output_modality =
-        typeof item.output_modality === "string" || Array.isArray(item.output_modality)
-          ? item.output_modality
-          : null;
-      return { model_id, output_modality };
-    })
-    .filter((item) => item.model_id.length > 0);
-};
-
-const pickTextModel = (configs: AiConfigRow[]) => {
-  for (const config of configs) {
-    if (Array.isArray(config.output_modality) && config.output_modality.includes("text")) {
-      return config.model_id;
-    }
-    if (typeof config.output_modality === "string" && config.output_modality.includes("text")) {
-      return config.model_id;
-    }
-  }
-  return configs[0]?.model_id ?? null;
-};
-
-const extractCompletionText = (value: unknown) => {
-  if (!value || typeof value !== "object") return "";
-  const candidate = value as {
-    choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }>;
-  };
-  const content = candidate.choices?.[0]?.message?.content;
-  if (typeof content === "string") return content.trim();
-  if (Array.isArray(content)) {
-    return content
-      .map((item) => (item && typeof item === "object" && item.type === "text" ? item.text ?? "" : ""))
-      .join(" ")
-      .trim();
-  }
-  return "";
 };
 
 const toDateInputValue = (isoDate: string | null) => (isoDate ? isoDate.slice(0, 10) : "");
@@ -270,23 +237,14 @@ export function useKanbanLogic() {
   }, []);
 
   const resolveAiModel = useCallback(
-    async (client: ReturnType<typeof getInsforgeClient>) => {
-      if (aiModelId) return aiModelId;
-      const envModelId = process.env.NEXT_PUBLIC_INSFORGE_AI_MODEL?.trim();
-      if (envModelId) {
-        setAiModelId(envModelId);
-        return envModelId;
-      }
-      
-      // Fallback: Check metadata via CLI-like scan or just pick first available if allowed
-      // For now, if no env var, we'll try one more time or fail with helpful message
-      if (!envModelId) {
-        setTaskError(
-          "No se encuentra NEXT_PUBLIC_INSFORGE_AI_MODEL. Asegúrate de que .env.local esté configurado correctamente.",
-        );
-        return null;
-      }
-      return null;
+    async (_client: ReturnType<typeof getInsforgeClient>) => {
+      void _client;
+      const resolvedModel = resolveTaskDescriptionModel(
+        aiModelId,
+        process.env.NEXT_PUBLIC_INSFORGE_AI_MODEL?.trim(),
+      );
+      setAiModelId(resolvedModel);
+      return resolvedModel;
     },
     [aiModelId],
   );
@@ -323,6 +281,44 @@ export function useKanbanLogic() {
       setIsLoadingAuth(false);
     })();
   }, [ensureProfile, fetchAuthConfig, insforge, loadBoardsAndTasks, loadCurrentUser]);
+
+  useEffect(() => {
+    if (!insforge || !user || !selectedBoardId) return;
+
+    const channelName = `board:${selectedBoardId}`;
+    const refreshFromRealtime = (payload: unknown) => {
+      if (!isRealtimePayloadForBoard(payload, selectedBoardId, channelName)) return;
+      void loadTasks(insforge, user.id, selectedBoardId);
+    };
+
+    void (async () => {
+      try {
+        await insforge.realtime.connect();
+      } catch (error) {
+        setTaskError(error instanceof Error ? error.message : "No se pudo conectar al realtime.");
+        return;
+      }
+
+      const subscribeResult = await insforge.realtime.subscribe(channelName);
+      if (!subscribeResult.ok) {
+        setTaskError(subscribeResult.error.message ?? "No se pudo suscribir al canal realtime.");
+        return;
+      }
+
+      insforge.realtime.on("task_created", refreshFromRealtime);
+      insforge.realtime.on("task_changed", refreshFromRealtime);
+      insforge.realtime.on("task_status_changed", refreshFromRealtime);
+      insforge.realtime.on("task_deleted", refreshFromRealtime);
+    })();
+
+    return () => {
+      insforge.realtime.off("task_created", refreshFromRealtime);
+      insforge.realtime.off("task_changed", refreshFromRealtime);
+      insforge.realtime.off("task_status_changed", refreshFromRealtime);
+      insforge.realtime.off("task_deleted", refreshFromRealtime);
+      insforge.realtime.unsubscribe(channelName);
+    };
+  }, [insforge, loadTasks, selectedBoardId, user]);
 
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -483,27 +479,28 @@ export function useKanbanLogic() {
     }
   }
 
-  async function handleCreateTask(event: FormEvent<HTMLFormElement> | string | { title: string; description?: string; status?: TaskStatus; priority?: TaskPriority }) {
+  async function handleCreateTask(event: FormEvent<HTMLFormElement> | TaskStatus | QuickTaskInput) {
     if (!insforge || !user || !selectedBoardId) return;
     
     // Check if it's a form event or direct call
     const isFormEvent = typeof event === "object" && event !== null && 'preventDefault' in event;
     const isStatusString = typeof event === "string";
-    const isDataObj = typeof event === "object" && event !== null && 'title' in event;
+    const isDataObj = typeof event === "object" && event !== null && "title" in event;
+    const dataEvent = isDataObj ? (event as QuickTaskInput) : null;
 
     if (isFormEvent) {
       event.preventDefault();
     }
 
     const finalStatus: TaskStatus = isStatusString 
-      ? (event as TaskStatus) 
-      : isDataObj 
-      ? ((event as any).status || "todo") 
+      ? (event as TaskStatus)
+      : isDataObj
+      ? (dataEvent?.status || "todo")
       : newTaskStatus;
 
-    const finalTitle = isDataObj ? (event as any).title : newTaskTitle;
-    const finalDescription = isDataObj ? (event as any).description : newTaskDescription;
-    const finalPriority = isDataObj ? (event as any).priority : newTaskPriority;
+    const finalTitle = isDataObj ? dataEvent?.title ?? "" : newTaskTitle;
+    const finalDescription = isDataObj ? dataEvent?.description : newTaskDescription;
+    const finalPriority = isDataObj ? dataEvent?.priority : newTaskPriority;
     const finalDueDate = isFormEvent ? newTaskDueDate : null;
 
     const title = finalTitle.trim();
@@ -545,30 +542,37 @@ export function useKanbanLogic() {
     const model = await resolveAiModel(insforge);
     if (!model) return null;
 
-    try {
+    const requestDescription = async (strictPrompt: boolean) => {
       const response = await insforge.ai.chat.completions.create({
         model,
-        messages: [
-          {
-            role: "system",
-            content: "Eres un asistente de productividad. Responde con una sola descripción breve en español, clara y accionable, sin listas.",
-          },
-          {
-            role: "user",
-            content: `Título de la tarea: ${title}. Genera una descripción útil para un tablero Kanban profesional.`,
-          },
-        ],
-        temperature: 0.4,
-        maxTokens: 180,
+        messages: buildTaskDescriptionMessages(title, strictPrompt),
+        temperature: 0.3,
+        maxTokens: 260,
       });
 
-      const responseError = (response as any)?.error;
+      const responseError =
+        "error" in (response as object) ? (response as { error?: { message?: string } }).error : undefined;
       if (responseError) {
-        setTaskError(responseError.message ?? "Error en la IA.");
+        const message = responseError.message ?? "Error en la IA.";
+        setTaskError(
+          message.toLowerCase().includes("model")
+            ? "No se pudo usar GPT-5 mini. Verifica en InsForge Dashboard que el modelo esté activo y que NEXT_PUBLIC_INSFORGE_AI_MODEL apunte a ese model_id."
+            : message,
+        );
         return null;
       }
 
       return extractCompletionText(response);
+    };
+
+    try {
+      const primary = (await requestDescription(false)) ?? "";
+      if (isUsableDescription(primary)) return primary;
+
+      const retry = (await requestDescription(true)) ?? "";
+      if (isUsableDescription(retry)) return retry;
+
+      return buildFallbackDescription(title);
     } catch (error) {
       setTaskError(error instanceof Error ? error.message : "Error al generar con IA.");
       return null;

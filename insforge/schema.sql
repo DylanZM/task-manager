@@ -234,6 +234,101 @@ CREATE TRIGGER tasks_set_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION tasks_set_updated_at_fn();
 
+INSERT INTO realtime.channels (pattern, description, enabled)
+SELECT 'board:%', 'Board updates for Kanban task sync', true
+WHERE NOT EXISTS (
+  SELECT 1 FROM realtime.channels WHERE pattern = 'board:%'
+);
+
+UPDATE realtime.channels
+SET description = 'Board updates for Kanban task sync',
+    enabled = true
+WHERE pattern = 'board:%';
+
+ALTER TABLE realtime.channels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "realtime_subscribe_own_boards" ON realtime.channels;
+CREATE POLICY "realtime_subscribe_own_boards"
+ON realtime.channels FOR SELECT
+TO authenticated
+USING (
+  pattern = 'board:%'
+  AND EXISTS (
+    SELECT 1 FROM boards b
+    WHERE b.id = NULLIF(split_part(realtime.channel_name(), ':', 2), '')::uuid
+      AND b.user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "realtime_read_own_board_messages" ON realtime.messages;
+CREATE POLICY "realtime_read_own_board_messages"
+ON realtime.messages FOR SELECT
+TO authenticated
+USING (
+  channel_name LIKE 'board:%'
+  AND EXISTS (
+    SELECT 1 FROM boards b
+    WHERE b.id = NULLIF(split_part(channel_name, ':', 2), '')::uuid
+      AND b.user_id = auth.uid()
+  )
+);
+
+CREATE OR REPLACE FUNCTION tasks_notify_realtime_fn()
+RETURNS TRIGGER AS $$
+DECLARE
+  target_board_id UUID;
+  event_name TEXT;
+  payload JSONB;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    target_board_id := OLD.board_id;
+    event_name := 'task_deleted';
+    payload := jsonb_build_object(
+      'task_id', OLD.id,
+      'board_id', OLD.board_id,
+      'status', OLD.status
+    );
+  ELSIF TG_OP = 'INSERT' THEN
+    target_board_id := NEW.board_id;
+    event_name := 'task_created';
+    payload := jsonb_build_object(
+      'task_id', NEW.id,
+      'board_id', NEW.board_id,
+      'status', NEW.status
+    );
+  ELSE
+    target_board_id := NEW.board_id;
+    event_name := CASE
+      WHEN OLD.status IS DISTINCT FROM NEW.status THEN 'task_status_changed'
+      ELSE 'task_changed'
+    END;
+    payload := jsonb_build_object(
+      'task_id', NEW.id,
+      'board_id', NEW.board_id,
+      'status', NEW.status,
+      'previous_status', OLD.status
+    );
+  END IF;
+
+  IF target_board_id IS NOT NULL THEN
+    PERFORM realtime.publish(
+      'board:' || target_board_id::text,
+      event_name,
+      payload
+    );
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS tasks_notify_realtime ON tasks;
+CREATE TRIGGER tasks_notify_realtime
+  AFTER INSERT OR UPDATE OR DELETE ON tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION tasks_notify_realtime_fn();
+
 DROP TRIGGER IF EXISTS profiles_set_updated_at ON profiles;
 CREATE TRIGGER profiles_set_updated_at
   BEFORE UPDATE ON profiles
@@ -246,3 +341,5 @@ REVOKE ALL ON TABLE profiles FROM anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE boards TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE tasks TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE profiles TO authenticated;
+GRANT SELECT ON TABLE realtime.channels TO authenticated;
+GRANT SELECT ON TABLE realtime.messages TO authenticated;

@@ -44,15 +44,16 @@ export function Button({
       disabled={isLoading || disabled}
       {...props}
     >
-      {isLoading ? (
-        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-      ) : LeftIcon ? (
+      {isLoading && (
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      )}
+      {!isLoading && LeftIcon && (
         <LeftIcon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
-      ) : null}
-      {children}
-      {!isLoading && RightIcon ? (
+      )}
+      {children && <span>{children}</span>}
+      {!isLoading && RightIcon && (
         <RightIcon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} />
-      ) : null}
+      )}
     </button>
   );
 }
