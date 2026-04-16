@@ -1,7 +1,9 @@
 "use client";
 
 import { CheckCircle2, Circle, Clock, MoreVertical, Plus, Archive, X, Sparkles } from "lucide-react";
-import { Task, TaskPriority, TaskStatus } from "@/lib/task-types";
+import type { LucideIcon } from "lucide-react";
+import { Task, TaskStatus } from "@/lib/task-types";
+import { QuickTaskInput } from "@/app/hooks/kanban/types";
 import { TaskCard } from "./task-card";
 import { Card, Badge } from "@/app/components/ui/card-badge";
 import { Button } from "@/app/components/ui/button";
@@ -14,11 +16,11 @@ interface TaskColumnProps {
   onOpenEditor: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onUpdateStatus: (taskId: string, status: TaskStatus) => void;
-  onCreateTask: (event: any) => void;
+  onCreateTask: (event: React.FormEvent<HTMLFormElement> | TaskStatus | QuickTaskInput) => void;
   onAiGenerate: (title: string) => Promise<string | null>;
 }
 
-const COLUMN_CONFIG: Record<TaskStatus, { label: string; icon: any; color: string }> = {
+const COLUMN_CONFIG: Record<TaskStatus, { label: string; icon: LucideIcon; color: string }> = {
   backlog: {
     label: "Backlog",
     icon: Archive,
@@ -46,6 +48,7 @@ export function TaskColumn({ status, tasks, onOpenEditor, onDeleteTask, onUpdate
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const config = COLUMN_CONFIG[status];
   const Icon = config.icon;
 
@@ -69,6 +72,31 @@ export function TaskColumn({ status, tasks, onOpenEditor, onDeleteTask, onUpdate
     const desc = await onAiGenerate(newTitle);
     if (desc) setNewDesc(desc);
     setIsGenerating(false);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    const taskId = event.dataTransfer.getData("application/x-task-id");
+    const currentStatus = event.dataTransfer.getData("application/x-task-status") as TaskStatus | "";
+    if (!taskId || currentStatus === status) return;
+    onUpdateStatus(taskId, status);
   };
 
   return (
@@ -99,7 +127,15 @@ export function TaskColumn({ status, tasks, onOpenEditor, onDeleteTask, onUpdate
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 p-2 custom-scrollbar">
+      <div
+        className={`custom-scrollbar flex flex-col gap-4 rounded-2xl p-2 transition-colors ${
+          isDragOver ? "bg-blue-50/70 ring-2 ring-blue-300/70 ring-inset" : ""
+        }`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         {isAdding && (
           <Card className="p-3 border-blue-200 bg-blue-50/30 shadow-md animate-in fade-in slide-in-from-top-2 duration-200">
             <form onSubmit={handleQuickAdd} className="space-y-3">

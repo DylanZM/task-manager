@@ -3,6 +3,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { getInsforgeClient } from "@/lib/insforge/client";
 import { AuthConfig, Board, Task, TaskPriority, TaskStatus } from "@/lib/task-types";
+import { DEFAULT_AUTH_CONFIG, toDateInputValue, toSafeBoards, toSafeTasks, toSafeUser } from "@/app/hooks/kanban/normalizers";
+import { AuthUser, QuickTaskInput } from "@/app/hooks/kanban/types";
 import {
   buildFallbackDescription,
   buildTaskDescriptionMessages,
@@ -10,79 +12,7 @@ import {
   isUsableDescription,
   resolveTaskDescriptionModel,
 } from "@/lib/insforge/ai-task-description";
-import { isRealtimePayloadForBoard } from "@/lib/insforge/realtime-board-events";
-
-export type AuthMode = "login" | "register";
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  name?: string | null;
-}
-
-interface QuickTaskInput {
-  title: string;
-  description?: string;
-  status?: TaskStatus;
-  priority?: TaskPriority;
-}
-
-const DEFAULT_AUTH_CONFIG: AuthConfig = {
-  requireEmailVerification: false,
-  passwordMinLength: 8,
-  verifyEmailMethod: "code",
-  resetPasswordMethod: "link",
-  oAuthProviders: [],
-};
-
-const toSafeUser = (value: unknown): AuthUser | null => {
-  if (!value || typeof value !== "object") return null;
-  const candidate = value as { id?: unknown; email?: unknown; name?: unknown };
-  if (typeof candidate.id !== "string" || typeof candidate.email !== "string") return null;
-  return {
-    id: candidate.id,
-    email: candidate.email,
-    name: typeof candidate.name === "string" ? candidate.name : null,
-  };
-};
-
-const toSafeBoards = (value: unknown): Board[] => {
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is Board => {
-    if (!item || typeof item !== "object") return false;
-    const board = item as Partial<Board>;
-    return (
-      typeof board.id === "string" &&
-      typeof board.user_id === "string" &&
-      typeof board.name === "string" &&
-      typeof board.created_at === "string" &&
-      typeof board.updated_at === "string"
-    );
-  });
-};
-
-const toSafeTasks = (value: unknown): Task[] => {
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is Task => {
-    if (!item || typeof item !== "object") return false;
-    const task = item as Partial<Task>;
-    return (
-      typeof task.id === "string" &&
-      typeof task.user_id === "string" &&
-      typeof task.board_id === "string" &&
-      typeof task.title === "string" &&
-      (task.description === null || typeof task.description === "string") &&
-      (task.status === "backlog" || task.status === "todo" || task.status === "in_progress" || task.status === "done") &&
-      (task.priority === "low" || task.priority === "medium" || task.priority === "high") &&
-      (task.due_date === null || typeof task.due_date === "string") &&
-      typeof task.position === "number" &&
-      typeof task.created_at === "string" &&
-      typeof task.updated_at === "string"
-    );
-  });
-};
-
-const toDateInputValue = (isoDate: string | null) => (isoDate ? isoDate.slice(0, 10) : "");
+import { useBoardRealtimeSync } from "@/app/hooks/kanban/use-board-realtime-sync";
 
 export function useKanbanLogic() {
   const [insforgeInit] = useState(() => {
@@ -97,7 +27,6 @@ export function useKanbanLogic() {
   });
   const insforge = insforgeInit.client;
 
-  const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [authConfig, setAuthConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG);
   const [isLoadingAuth, setIsLoadingAuth] = useState(Boolean(insforge));
   const [authMessage, setAuthMessage] = useState("");
@@ -282,43 +211,7 @@ export function useKanbanLogic() {
     })();
   }, [ensureProfile, fetchAuthConfig, insforge, loadBoardsAndTasks, loadCurrentUser]);
 
-  useEffect(() => {
-    if (!insforge || !user || !selectedBoardId) return;
-
-    const channelName = `board:${selectedBoardId}`;
-    const refreshFromRealtime = (payload: unknown) => {
-      if (!isRealtimePayloadForBoard(payload, selectedBoardId, channelName)) return;
-      void loadTasks(insforge, user.id, selectedBoardId);
-    };
-
-    void (async () => {
-      try {
-        await insforge.realtime.connect();
-      } catch (error) {
-        setTaskError(error instanceof Error ? error.message : "No se pudo conectar al realtime.");
-        return;
-      }
-
-      const subscribeResult = await insforge.realtime.subscribe(channelName);
-      if (!subscribeResult.ok) {
-        setTaskError(subscribeResult.error.message ?? "No se pudo suscribir al canal realtime.");
-        return;
-      }
-
-      insforge.realtime.on("task_created", refreshFromRealtime);
-      insforge.realtime.on("task_changed", refreshFromRealtime);
-      insforge.realtime.on("task_status_changed", refreshFromRealtime);
-      insforge.realtime.on("task_deleted", refreshFromRealtime);
-    })();
-
-    return () => {
-      insforge.realtime.off("task_created", refreshFromRealtime);
-      insforge.realtime.off("task_changed", refreshFromRealtime);
-      insforge.realtime.off("task_status_changed", refreshFromRealtime);
-      insforge.realtime.off("task_deleted", refreshFromRealtime);
-      insforge.realtime.unsubscribe(channelName);
-    };
-  }, [insforge, loadTasks, selectedBoardId, user]);
+  useBoardRealtimeSync({ insforge, user, selectedBoardId, loadTasks, setTaskError });
 
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -342,7 +235,6 @@ export function useKanbanLogic() {
       setVerificationMethod(method);
       setPendingVerificationEmail(email);
       setAuthMessage(method === "link" ? "Revisa tu correo y luego inicia sesión." : "Ingresa el código de verificación.");
-      if (method === "link") setAuthMode("login");
       return;
     }
     const signedUpUser = toSafeUser(data?.user);
@@ -663,8 +555,6 @@ export function useKanbanLogic() {
 
   return {
     // Auth State
-    authMode,
-    setAuthMode,
     authConfig,
     isLoadingAuth,
     authMessage,

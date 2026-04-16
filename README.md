@@ -7,6 +7,7 @@ Kanban-style task manager built with Next.js and InsForge, including:
 - Email verification-aware sign-up flow (code/link backend config)
 - Board-based Kanban workflow (create board, then manage tasks per board)
 - Task CRUD (create, edit, move between columns, delete)
+- Drag & drop de tareas entre estados del Kanban
 - AI task description generation from task title
 - Real-time task synchronization by board (status and changes across open clients)
 - Persistent tasks in InsForge Postgres with RLS per user
@@ -58,6 +59,12 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+Rutas principales:
+
+- `http://localhost:3000/login` para autenticación
+- `http://localhost:3000/register` para registro
+- `http://localhost:3000/` para el board Kanban autenticado
 
 ## Notes
 

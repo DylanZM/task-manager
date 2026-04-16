@@ -1,6 +1,7 @@
 "use client";
 
-import { Code2, Globe, Layout, Lock, Mail, User } from "lucide-react";
+import { Code2, Globe, Layout, Lock, Mail } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/form";
 import { Card, Badge } from "@/app/components/ui/card-badge";
@@ -9,7 +10,6 @@ type AuthMode = "login" | "register";
 
 type Props = {
   authMode: AuthMode;
-  setAuthMode: (mode: AuthMode) => void;
   needsVerificationCode: boolean;
   verificationCode: string;
   setVerificationCode: (value: string) => void;
@@ -33,7 +33,6 @@ type Props = {
 
 export function AuthScreen({
   authMode,
-  setAuthMode,
   needsVerificationCode,
   verificationCode,
   setVerificationCode,
@@ -201,15 +200,14 @@ export function AuthScreen({
           )}
 
           <div className="mt-8 text-center">
-            <button
-              type="button"
-              onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}
-              className="text-sm font-medium text-zinc-600 hover:text-zinc-950 transition-colors"
+            <Link
+              href={authMode === "login" ? "/register" : "/login"}
+              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950"
             >
               {authMode === "login"
                 ? "¿No tienes una cuenta? Regístrate"
                 : "¿Ya tienes cuenta? Inicia sesión"}
-            </button>
+            </Link>
           </div>
         </Card>
 

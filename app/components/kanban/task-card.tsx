@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Clock, Edit3, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Calendar, Pencil, Trash2 } from "lucide-react";
 import { Task, TaskPriority, TaskStatus } from "@/lib/task-types";
 import { Card, Badge } from "@/app/components/ui/card-badge";
 import { Button } from "@/app/components/ui/button";
@@ -27,8 +27,18 @@ const STATUS_OPTIONS: { label: string; value: TaskStatus }[] = [
 export function TaskCard({ task, onOpenEditor, onDeleteTask, onUpdateStatus }: TaskCardProps) {
   const isPastDue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "done";
 
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
+    event.dataTransfer.setData("application/x-task-id", task.id);
+    event.dataTransfer.setData("application/x-task-status", task.status);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
   return (
-    <Card className="group relative flex flex-col p-4 border-zinc-200/60 bg-white hover:border-zinc-300 transition-all duration-300 hover:shadow-lg hover:shadow-zinc-200/40">
+    <Card
+      draggable
+      onDragStart={handleDragStart}
+      className="group relative flex cursor-grab flex-col border-zinc-200/60 bg-white p-4 transition-all duration-300 hover:border-zinc-300 hover:shadow-lg hover:shadow-zinc-200/40 active:cursor-grabbing"
+    >
       <div className="mb-3 flex items-start justify-between gap-2">
         <Badge variant={PRIORITY_VARIANTS[task.priority]} size="sm" className="opacity-90">
           {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Media" : "Baja"}

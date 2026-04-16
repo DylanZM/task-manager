@@ -2,6 +2,7 @@
 
 import { Calendar, CheckCircle2, Columns3, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { Board, Task, TaskPriority, TaskStatus } from "@/lib/task-types";
+import { QuickTaskInput } from "@/app/hooks/kanban/types";
 import { Button } from "@/app/components/ui/button";
 import { Input, Textarea, Select } from "@/app/components/ui/form";
 import { Card, Badge } from "@/app/components/ui/card-badge";
@@ -43,7 +44,7 @@ type Props = {
   isLoadingTasks: boolean;
   isGeneratingNewDescription: boolean;
   isGeneratingEditingDescription: boolean;
-  onCreateTask: (event: React.FormEvent<HTMLFormElement>) => void;
+  onCreateTask: (event: React.FormEvent<HTMLFormElement> | TaskStatus | QuickTaskInput) => void;
   onSaveEditor: (event: React.FormEvent<HTMLFormElement>) => void;
   onCloseEditor: () => void;
   onGenerateNewDescription: () => void;
