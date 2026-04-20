@@ -63,7 +63,7 @@ type Props = {
   authMessage: string;
   authError: string;
   isSubmittingAuth: boolean;
-  isOAuthLoading: boolean;
+  oauthLoadingProvider: "github" | "google" | null;
   oauthProviders: Array<"github" | "google">;
   onRegister: (event: React.FormEvent<HTMLFormElement>) => void;
   onLogin: (event: React.FormEvent<HTMLFormElement>) => void;
@@ -86,13 +86,17 @@ export function AuthScreen({
   authMessage,
   authError,
   isSubmittingAuth,
-  isOAuthLoading,
+  oauthLoadingProvider,
   oauthProviders,
   onRegister,
   onLogin,
   onVerifyCode,
   onOAuth,
 }: Props) {
+  const isGithubLoading = oauthLoadingProvider === "github";
+  const isGoogleLoading = oauthLoadingProvider === "google";
+  const isAnyOAuthLoading = Boolean(oauthLoadingProvider);
+
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-50 p-6 selection:bg-zinc-950 selection:text-white">
       <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-zinc-200/50 blur-3xl" />
@@ -213,8 +217,10 @@ export function AuthScreen({
                     {oauthProviders.includes("github") && (
                       <Button
                         variant="outline"
+                        type="button"
+                        isLoading={isGithubLoading}
                         onClick={() => onOAuth("github")}
-                        disabled={isOAuthLoading || isSubmittingAuth}
+                        disabled={isAnyOAuthLoading || isSubmittingAuth}
                         className="h-12 [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:whitespace-nowrap [&>span]:leading-none"
                       >
                         <GitHubIcon className="h-5 w-5 shrink-0" />
@@ -224,8 +230,10 @@ export function AuthScreen({
                     {oauthProviders.includes("google") && (
                       <Button
                         variant="outline"
+                        type="button"
+                        isLoading={isGoogleLoading}
                         onClick={() => onOAuth("google")}
-                        disabled={isOAuthLoading || isSubmittingAuth}
+                        disabled={isAnyOAuthLoading || isSubmittingAuth}
                         className="h-12 [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:whitespace-nowrap [&>span]:leading-none"
                       >
                         <GoogleIcon className="h-5 w-5 shrink-0" />

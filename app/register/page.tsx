@@ -13,7 +13,7 @@ export default function RegisterPage() {
     authMessage,
     authError,
     isSubmittingAuth,
-    isOAuthLoading,
+    oauthLoadingProvider,
     email,
     setEmail,
     password,
@@ -66,7 +66,7 @@ export default function RegisterPage() {
       authMessage={authMessage}
       authError={authError}
       isSubmittingAuth={isSubmittingAuth}
-      isOAuthLoading={isOAuthLoading}
+      oauthLoadingProvider={oauthLoadingProvider}
       oauthProviders={authConfig.oAuthProviders.filter(
         (provider): provider is "github" | "google" =>
           provider === "github" || provider === "google",

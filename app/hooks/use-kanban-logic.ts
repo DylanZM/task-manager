@@ -32,7 +32,7 @@ export function useKanbanLogic() {
   const [authMessage, setAuthMessage] = useState("");
   const [authError, setAuthError] = useState(insforgeInit.error);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
-  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  const [oauthLoadingProvider, setOAuthLoadingProvider] = useState<"github" | "google" | null>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -293,14 +293,14 @@ export function useKanbanLogic() {
     if (!insforge) return;
     setAuthError("");
     setAuthMessage("");
-    setIsOAuthLoading(true);
+    setOAuthLoadingProvider(provider);
     const { error } = await insforge.auth.signInWithOAuth({
       provider,
       redirectTo: `${window.location.origin}/`,
     });
     if (error) {
       setAuthError(error.message);
-      setIsOAuthLoading(false);
+      setOAuthLoadingProvider(null);
     }
   }
 
@@ -560,7 +560,7 @@ export function useKanbanLogic() {
     authMessage,
     authError,
     isSubmittingAuth,
-    isOAuthLoading,
+    oauthLoadingProvider,
     email,
     setEmail,
     password,
