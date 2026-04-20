@@ -1,12 +1,52 @@
 "use client";
 
-import { Code2, Globe, Layout, Lock, Mail } from "lucide-react";
+import { Layout, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/form";
 import { Card, Badge } from "@/app/components/ui/card-badge";
 
 type AuthMode = "login" | "register";
+
+const GitHubIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    className={className}
+    aria-hidden="true"
+  >
+    <path
+      d="M12 .5C5.648.5.5 5.648.5 12c0 5.082 3.292 9.387 7.86 10.91.575.106.785-.25.785-.556 0-.273-.01-.996-.015-1.954-3.197.695-3.872-1.54-3.872-1.54-.523-1.328-1.278-1.682-1.278-1.682-1.045-.714.079-.7.079-.7 1.155.082 1.762 1.187 1.762 1.187 1.026 1.758 2.692 1.25 3.348.956.104-.743.402-1.25.73-1.537-2.552-.29-5.238-1.276-5.238-5.682 0-1.255.448-2.282 1.183-3.087-.119-.29-.512-1.46.113-3.045 0 0 .965-.309 3.163 1.179A10.98 10.98 0 0 1 12 6.038c.973.004 1.953.132 2.868.388 2.197-1.488 3.161-1.179 3.161-1.179.626 1.585.233 2.755.114 3.045.737.805 1.182 1.832 1.182 3.087 0 4.417-2.69 5.388-5.252 5.673.413.355.781 1.058.781 2.133 0 1.54-.014 2.781-.014 3.159 0 .309.207.668.79.555C20.21 21.384 23.5 17.08 23.5 12 23.5 5.648 18.352.5 12 .5z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+const GoogleIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    className={className}
+    aria-hidden="true"
+  >
+    <path
+      d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.44a5.5 5.5 0 0 1-2.39 3.61v3h3.87c2.26-2.08 3.57-5.15 3.57-8.85z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 24c3.24 0 5.95-1.07 7.93-2.91l-3.87-3c-1.07.72-2.44 1.16-4.06 1.16-3.12 0-5.76-2.1-6.7-4.92H1.3v3.09A11.99 11.99 0 0 0 12 24z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.3 14.33a7.2 7.2 0 0 1 0-4.66V6.58H1.3a12 12 0 0 0 0 10.84l4-3.09z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 4.75c1.76 0 3.34.61 4.58 1.8l3.43-3.43C17.94 1.19 15.24 0 12 0A11.99 11.99 0 0 0 1.3 6.58l4 3.09c.94-2.82 3.58-4.92 6.7-4.92z"
+      fill="#EA4335"
+    />
+  </svg>
+);
 
 type Props = {
   authMode: AuthMode;
@@ -55,7 +95,6 @@ export function AuthScreen({
 }: Props) {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-50 p-6 selection:bg-zinc-950 selection:text-white">
-      {/* Background Decoration */}
       <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-zinc-200/50 blur-3xl" />
       <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-zinc-200/50 blur-3xl" />
 
@@ -176,9 +215,9 @@ export function AuthScreen({
                         variant="outline"
                         onClick={() => onOAuth("github")}
                         disabled={isOAuthLoading || isSubmittingAuth}
-                        leftIcon={Code2}
-                        className="py-6"
+                        className="h-12 [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:whitespace-nowrap [&>span]:leading-none"
                       >
+                        <GitHubIcon className="h-5 w-5 shrink-0" />
                         GitHub
                       </Button>
                     )}
@@ -187,9 +226,9 @@ export function AuthScreen({
                         variant="outline"
                         onClick={() => onOAuth("google")}
                         disabled={isOAuthLoading || isSubmittingAuth}
-                        leftIcon={Globe}
-                        className="py-6"
+                        className="h-12 [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:whitespace-nowrap [&>span]:leading-none"
                       >
+                        <GoogleIcon className="h-5 w-5 shrink-0" />
                         Google
                       </Button>
                     )}
