@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { getInsforgeClient } from "@/lib/insforge/client";
-import { AuthConfig, Board, Task, TaskPriority, TaskStatus } from "@/lib/task-types";
+import { AuthConfig, Board, Task, TaskChecklistItem, TaskPriority, TaskStatus } from "@/lib/task-types";
 import { DEFAULT_AUTH_CONFIG, toDateInputValue, toSafeBoards, toSafeTasks, toSafeUser } from "@/app/hooks/kanban/normalizers";
 import { AuthUser, QuickTaskInput } from "@/app/hooks/kanban/types";
 import {
@@ -68,6 +68,7 @@ export function useKanbanLogic() {
   const [editingStatus, setEditingStatus] = useState<TaskStatus>("todo");
   const [editingPriority, setEditingPriority] = useState<TaskPriority>("medium");
   const [editingDueDate, setEditingDueDate] = useState("");
+  const [editingChecklist, setEditingChecklist] = useState<TaskChecklistItem[]>([]);
 
   const selectedBoard = useMemo(
     () => boards.find((board) => board.id === selectedBoardId) ?? null,
@@ -408,6 +409,7 @@ export function useKanbanLogic() {
       status: finalStatus,
       priority: finalPriority || "medium",
       due_date: finalDueDate ? new Date(finalDueDate).toISOString() : null,
+      checklist: [],
       position: nextPosition,
     };
 
@@ -501,6 +503,7 @@ export function useKanbanLogic() {
     if (update.priority) dbUpdate.priority = update.priority;
     if (update.position !== undefined) dbUpdate.position = update.position;
     if (update.due_date !== undefined) dbUpdate.due_date = update.due_date;
+    if (update.checklist !== undefined) dbUpdate.checklist = update.checklist;
     const { data, error } = await insforge.database
       .from("tasks")
       .update(dbUpdate)
@@ -537,6 +540,7 @@ export function useKanbanLogic() {
     setEditingStatus(task.status);
     setEditingPriority(task.priority);
     setEditingDueDate(toDateInputValue(task.due_date));
+    setEditingChecklist(task.checklist ?? []);
   }
 
   async function saveEditor(event: FormEvent<HTMLFormElement>) {
@@ -548,8 +552,43 @@ export function useKanbanLogic() {
       status: editingStatus,
       priority: editingPriority,
       due_date: editingDueDate ? new Date(editingDueDate).toISOString() : null,
+      checklist: editingChecklist,
     });
     setEditingTaskId(null);
+  }
+
+  function createChecklistItem(text: string): TaskChecklistItem {
+    const fallbackId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return {
+      id: typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : fallbackId,
+      text: text.trim(),
+      done: false,
+    };
+  }
+
+  function addEditingChecklistItem(text: string) {
+    const value = text.trim();
+    if (!value) return;
+    setEditingChecklist((prev) => [...prev, createChecklistItem(value)]);
+  }
+
+  function toggleEditingChecklistItem(itemId: string) {
+    setEditingChecklist((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, done: !item.done } : item)),
+    );
+  }
+
+  function removeEditingChecklistItem(itemId: string) {
+    setEditingChecklist((prev) => prev.filter((item) => item.id !== itemId));
+  }
+
+  async function toggleChecklistItem(taskId: string, itemId: string) {
+    const task = tasks.find((candidate) => candidate.id === taskId);
+    if (!task) return;
+    const nextChecklist = task.checklist.map((item) =>
+      item.id === itemId ? { ...item, done: !item.done } : item,
+    );
+    await updateTask(taskId, { checklist: nextChecklist });
   }
 
   return {
@@ -613,6 +652,7 @@ export function useKanbanLogic() {
     setEditingPriority,
     editingDueDate,
     setEditingDueDate,
+    editingChecklist,
 
     // Actions
     handleRegister,
@@ -630,5 +670,9 @@ export function useKanbanLogic() {
     openEditor,
     saveEditor,
     handleAiGenerate,
+    addEditingChecklistItem,
+    toggleEditingChecklistItem,
+    removeEditingChecklistItem,
+    toggleChecklistItem,
   };
 }

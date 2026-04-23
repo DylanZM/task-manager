@@ -1,34 +1,20 @@
 "use client";
 
-import { Calendar, CheckCircle2, Columns3, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
-import { Board, Task, TaskPriority, TaskStatus } from "@/lib/task-types";
+import { useMemo, useState } from "react";
+import { Columns3 } from "lucide-react";
+import { Board, Task, TaskChecklistItem, TaskPriority, TaskStatus } from "@/lib/task-types";
 import { QuickTaskInput } from "@/app/hooks/kanban/types";
-import { Button } from "@/app/components/ui/button";
-import { Input, Textarea, Select } from "@/app/components/ui/form";
 import { Card, Badge } from "@/app/components/ui/card-badge";
 import { TaskColumn } from "./task-column";
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  backlog: "Backlog",
-  todo: "Por hacer",
-  in_progress: "En progreso",
-  done: "Completado",
-};
+import { KanbanBoardHeader } from "./kanban-board-header";
+import { KanbanCalendarView } from "./kanban-calendar-view";
+import { TaskEditorModal } from "./task-editor-modal";
+import { AppNotification, DueFilter, ViewMode, STATUS_OPTIONS } from "./kanban-board-constants";
 
 type Props = {
   userEmail: string;
   selectedBoard: Board | null;
   selectedBoardId: string | null;
-  newTaskTitle: string;
-  setNewTaskTitle: (value: string) => void;
-  newTaskDescription: string;
-  setNewTaskDescription: (value: string) => void;
-  newTaskStatus: TaskStatus;
-  setNewTaskStatus: (value: TaskStatus) => void;
-  newTaskPriority: TaskPriority;
-  setNewTaskPriority: (value: TaskPriority) => void;
-  newTaskDueDate: string;
-  setNewTaskDueDate: (value: string) => void;
   editingTaskId: string | null;
   editingTitle: string;
   setEditingTitle: (value: string) => void;
@@ -40,35 +26,50 @@ type Props = {
   setEditingPriority: (value: TaskPriority) => void;
   editingDueDate: string;
   setEditingDueDate: (value: string) => void;
+  editingChecklist: TaskChecklistItem[];
+  tasks: Task[];
   groupedTasks: Record<TaskStatus, Task[]>;
   isLoadingTasks: boolean;
-  isGeneratingNewDescription: boolean;
   isGeneratingEditingDescription: boolean;
   onCreateTask: (event: React.FormEvent<HTMLFormElement> | TaskStatus | QuickTaskInput) => void;
   onSaveEditor: (event: React.FormEvent<HTMLFormElement>) => void;
   onCloseEditor: () => void;
-  onGenerateNewDescription: () => void;
   onGenerateEditingDescription: () => void;
   onUpdateTaskStatus: (taskId: string, status: TaskStatus) => void;
   onOpenEditor: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onAiGenerate: (title: string) => Promise<string | null>;
+  onAddEditingChecklistItem: (text: string) => void;
+  onToggleEditingChecklistItem: (itemId: string) => void;
+  onRemoveEditingChecklistItem: (itemId: string) => void;
+  onToggleChecklistItem: (taskId: string, itemId: string) => void;
 };
+
+function isToday(value: Date) {
+  const now = new Date();
+  return (
+    value.getFullYear() === now.getFullYear() &&
+    value.getMonth() === now.getMonth() &&
+    value.getDate() === now.getDate()
+  );
+}
+
+function isThisWeek(value: Date) {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const start = new Date(now);
+  start.setDate(now.getDate() - diff);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return value >= start && value < end;
+}
 
 export function KanbanBoard({
   userEmail,
   selectedBoard,
   selectedBoardId,
-  newTaskTitle,
-  setNewTaskTitle,
-  newTaskDescription,
-  setNewTaskDescription,
-  newTaskStatus,
-  setNewTaskStatus,
-  newTaskPriority,
-  setNewTaskPriority,
-  newTaskDueDate,
-  setNewTaskDueDate,
   editingTaskId,
   editingTitle,
   setEditingTitle,
@@ -80,20 +81,126 @@ export function KanbanBoard({
   setEditingPriority,
   editingDueDate,
   setEditingDueDate,
+  editingChecklist,
+  tasks,
   groupedTasks,
   isLoadingTasks,
-  isGeneratingNewDescription,
   isGeneratingEditingDescription,
   onCreateTask,
   onSaveEditor,
   onCloseEditor,
-  onGenerateNewDescription,
   onGenerateEditingDescription,
   onUpdateTaskStatus,
   onOpenEditor,
   onDeleteTask,
   onAiGenerate,
+  onAddEditingChecklistItem,
+  onToggleEditingChecklistItem,
+  onRemoveEditingChecklistItem,
+  onToggleChecklistItem,
 }: Props) {
+  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [query, setQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | TaskPriority>("all");
+  const [dueFilter, setDueFilter] = useState<DueFilter>("all");
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const filteredTasks = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const now = new Date();
+
+    return tasks.filter((task) => {
+      const queryMatches =
+        !normalizedQuery ||
+        task.title.toLowerCase().includes(normalizedQuery) ||
+        (task.description ?? "").toLowerCase().includes(normalizedQuery) ||
+        task.checklist.some((item) => item.text.toLowerCase().includes(normalizedQuery));
+      if (!queryMatches) return false;
+
+      if (priorityFilter !== "all" && task.priority !== priorityFilter) return false;
+
+      if (dueFilter === "all") return true;
+      if (dueFilter === "no_due") return !task.due_date;
+      if (!task.due_date) return false;
+
+      const dueDate = new Date(task.due_date);
+      if (dueFilter === "overdue") return dueDate < now && task.status !== "done";
+      if (dueFilter === "today") return isToday(dueDate);
+      if (dueFilter === "this_week") return isThisWeek(dueDate);
+      return true;
+    });
+  }, [dueFilter, priorityFilter, query, tasks]);
+
+  const filteredGroupedTasks = useMemo(
+    () => ({
+      backlog: filteredTasks.filter((task) => task.status === "backlog"),
+      todo: filteredTasks.filter((task) => task.status === "todo"),
+      in_progress: filteredTasks.filter((task) => task.status === "in_progress"),
+      done: filteredTasks.filter((task) => task.status === "done"),
+    }),
+    [filteredTasks],
+  );
+
+  const calendarGroups = useMemo(() => {
+    const grouped = new Map<string, Task[]>();
+    for (const task of filteredTasks) {
+      if (!task.due_date) continue;
+      const key = task.due_date.slice(0, 10);
+      const bucket = grouped.get(key) ?? [];
+      bucket.push(task);
+      grouped.set(key, bucket);
+    }
+    return Array.from(grouped.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, value]) => ({
+        key,
+        label: new Date(key).toLocaleDateString("es-ES", {
+          weekday: "short",
+          day: "numeric",
+          month: "long",
+        }),
+        tasks: value.sort((left, right) => {
+          const leftPriority = left.priority === "high" ? 3 : left.priority === "medium" ? 2 : 1;
+          const rightPriority = right.priority === "high" ? 3 : right.priority === "medium" ? 2 : 1;
+          return rightPriority - leftPriority;
+        }),
+      }));
+  }, [filteredTasks]);
+
+  const noDueTasks = useMemo(() => filteredTasks.filter((task) => !task.due_date), [filteredTasks]);
+
+  const notifications = useMemo(() => {
+    const now = new Date();
+    const alerts: AppNotification[] = [];
+    const overdueTasks = tasks.filter((task) => {
+      if (!task.due_date || task.status === "done") return false;
+      return new Date(task.due_date) < now;
+    });
+    const soonTasks = tasks.filter((task) => {
+      if (!task.due_date || task.status === "done") return false;
+      const due = new Date(task.due_date);
+      return due >= now && due.getTime() - now.getTime() <= 24 * 60 * 60 * 1000;
+    });
+    const doneTasks = tasks.filter((task) => task.status === "done");
+
+    overdueTasks.slice(0, 6).forEach((task) => {
+      alerts.push({ id: `overdue-${task.id}`, kind: "warning", message: `Tarea vencida: ${task.title}` });
+    });
+    soonTasks.slice(0, 6).forEach((task) => {
+      alerts.push({ id: `soon-${task.id}`, kind: "warning", message: `Vence pronto: ${task.title}` });
+    });
+    doneTasks.slice(0, 4).forEach((task) => {
+      alerts.push({ id: `done-${task.id}`, kind: "success", message: `Completada: ${task.title}` });
+    });
+    if (alerts.length === 0) {
+      alerts.push({ id: "sync-info", kind: "info", message: "Todo en orden. No hay alertas pendientes." });
+    }
+    return alerts;
+  }, [tasks]);
+
+  const unreadNotifications = showNotifications ? 0 : notifications.length;
+  const activeGroupedTasks = query || priorityFilter !== "all" || dueFilter !== "all" ? filteredGroupedTasks : groupedTasks;
+
   if (!selectedBoardId) {
     return (
       <Card className="flex h-[600px] flex-col items-center justify-center border-dashed border-zinc-200 bg-zinc-50/50 p-12 text-center">
@@ -109,133 +216,80 @@ export function KanbanBoard({
   }
 
   return (
-    <div className="flex flex-col gap-6 min-w-0">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-black text-zinc-950 tracking-tight">
-              {selectedBoard?.name}
-            </h2>
-            <Badge variant="blue" size="md" className="font-black bg-blue-100/50 text-blue-700">Propio</Badge>
-          </div>
-          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-zinc-400">
-            Escritorio de {userEmail}
-          </p>
+    <div className="flex min-w-0 flex-col gap-6">
+      <KanbanBoardHeader
+        userEmail={userEmail}
+        boardName={selectedBoard?.name ?? null}
+        viewMode={viewMode}
+        onSetViewMode={setViewMode}
+        showNotifications={showNotifications}
+        onToggleNotifications={() => setShowNotifications((prev) => !prev)}
+        unreadNotifications={unreadNotifications}
+        query={query}
+        onSetQuery={setQuery}
+        priorityFilter={priorityFilter}
+        onSetPriorityFilter={setPriorityFilter}
+        dueFilter={dueFilter}
+        onSetDueFilter={setDueFilter}
+        notifications={notifications}
+      />
+
+      {viewMode === "kanban" ? (
+        <div className="grid grid-cols-1 gap-6 pb-6 md:grid-cols-2 xl:grid-cols-4">
+          {STATUS_OPTIONS.map((status) => (
+            <TaskColumn
+              key={status}
+              status={status}
+              tasks={activeGroupedTasks[status]}
+              onOpenEditor={onOpenEditor}
+              onDeleteTask={onDeleteTask}
+              onUpdateStatus={onUpdateTaskStatus}
+              onToggleChecklistItem={onToggleChecklistItem}
+              onCreateTask={onCreateTask}
+              onAiGenerate={onAiGenerate}
+            />
+          ))}
         </div>
-
-      
-      </header>
-
-
-      {/* Columns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 pb-6">
-        {(["backlog", "todo", "in_progress", "done"] as TaskStatus[]).map((status) => (
-          <TaskColumn
-            key={status}
-            status={status}
-            tasks={groupedTasks[status]}
-            onOpenEditor={onOpenEditor}
-            onDeleteTask={onDeleteTask}
-            onUpdateStatus={onUpdateTaskStatus}
-            onCreateTask={onCreateTask}
-            onAiGenerate={onAiGenerate}
-          />
-        ))}
-      </div>
+      ) : (
+        <KanbanCalendarView
+          calendarGroups={calendarGroups}
+          noDueTasks={noDueTasks}
+          onUpdateTaskStatus={onUpdateTaskStatus}
+          onOpenEditor={onOpenEditor}
+          onDeleteTask={onDeleteTask}
+        />
+      )}
 
       {isLoadingTasks && (
         <div className="fixed bottom-6 right-6 z-50">
-          <Badge variant="zinc" className="flex items-center gap-2 py-2 px-4 shadow-xl shadow-zinc-200/50 bg-white/80 backdrop-blur-md">
+          <Badge variant="zinc" className="flex items-center gap-2 bg-white/80 py-2 px-4 shadow-xl shadow-zinc-200/50 backdrop-blur-md">
             <div className="h-2 w-2 animate-pulse rounded-full bg-zinc-950" />
             Cargando cambios...
           </Badge>
         </div>
       )}
 
-      {/* Editor Modal Overlay */}
-      {editingTaskId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-zinc-950/20 backdrop-blur-sm">
-          <Card className="w-full max-w-lg p-0 overflow-hidden shadow-2xl shadow-zinc-950/20 border-white/40">
-            <div className="flex items-center justify-between border-b border-zinc-100 p-4 px-6 bg-zinc-50/50">
-               <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-950 text-white">
-                    <Pencil className="h-4 w-4" />
-                  </div>
-                  <h3 className="text-sm font-bold text-zinc-950 uppercase tracking-widest">Editar Tarea</h3>
-               </div>
-               <Button variant="ghost" size="icon" onClick={onCloseEditor} className="h-8 w-8 text-zinc-400 hover:text-zinc-950">
-                  <X className="h-4 w-4" />
-               </Button>
-            </div>
-            
-            <form onSubmit={onSaveEditor} className="p-6 space-y-6">
-              <Input
-                label="Título"
-                required
-                value={editingTitle}
-                onChange={(e) => setEditingTitle(e.target.value)}
-                className="font-bold border-zinc-200"
-              />
-              
-              <div className="relative group">
-                <Textarea
-                  label="Descripción"
-                  value={editingDescription}
-                  onChange={(e) => setEditingDescription(e.target.value)}
-                  className="min-h-[140px] pb-12"
-                />
-                <Button
-                  type="button"
-                  variant="amber"
-                  size="sm"
-                  onClick={onGenerateEditingDescription}
-                  disabled={isGeneratingEditingDescription || !editingTitle.trim()}
-                  className="absolute right-2 bottom-2 h-9 px-3"
-                  leftIcon={Sparkles}
-                >
-                  {isGeneratingEditingDescription ? "Actualizando..." : "Mejorar con IA"}
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Select
-                  label="Estado"
-                  value={editingStatus}
-                  onChange={(e) => setEditingStatus(e.target.value as TaskStatus)}
-                  options={[
-                    { label: "Backlog", value: "backlog" },
-                    { label: "Por hacer", value: "todo" },
-                    { label: "En progreso", value: "in_progress" },
-                    { label: "Completado", value: "done" },
-                  ]}
-                />
-                <Select
-                  label="Prioridad"
-                  value={editingPriority}
-                  onChange={(e) => setEditingPriority(e.target.value as TaskPriority)}
-                  options={[
-                    { label: "Baja", value: "low" },
-                    { label: "Media", value: "medium" },
-                    { label: "Alta", value: "high" },
-                  ]}
-                />
-              </div>
-
-              <Input
-                label="Fecha de vencimiento"
-                type="date"
-                value={editingDueDate}
-                onChange={(e) => setEditingDueDate(e.target.value)}
-              />
-
-              <div className="flex gap-3 pt-4 border-t border-zinc-100">
-                <Button type="submit" className="flex-1 shadow-lg shadow-zinc-200/50">Guardar Cambios</Button>
-                <Button type="button" variant="outline" onClick={onCloseEditor} className="flex-1">Cancelar</Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+      <TaskEditorModal
+        isOpen={Boolean(editingTaskId)}
+        editingTitle={editingTitle}
+        setEditingTitle={setEditingTitle}
+        editingDescription={editingDescription}
+        setEditingDescription={setEditingDescription}
+        editingStatus={editingStatus}
+        setEditingStatus={setEditingStatus}
+        editingPriority={editingPriority}
+        setEditingPriority={setEditingPriority}
+        editingDueDate={editingDueDate}
+        setEditingDueDate={setEditingDueDate}
+        editingChecklist={editingChecklist}
+        isGeneratingEditingDescription={isGeneratingEditingDescription}
+        onClose={onCloseEditor}
+        onSaveEditor={onSaveEditor}
+        onGenerateEditingDescription={onGenerateEditingDescription}
+        onAddEditingChecklistItem={onAddEditingChecklistItem}
+        onToggleEditingChecklistItem={onToggleEditingChecklistItem}
+        onRemoveEditingChecklistItem={onRemoveEditingChecklistItem}
+      />
     </div>
   );
 }

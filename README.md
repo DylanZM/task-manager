@@ -1,78 +1,157 @@
 # InsForge Kanban Task Manager
 
-Kanban-style task manager built with Next.js and InsForge, including:
+A modern Kanban task manager built with **Next.js 16**, **React 19**, and **InsForge**.
 
-- User registration
-- Login/logout
-- Email verification-aware sign-up flow (code/link backend config)
-- Board-based Kanban workflow (create board, then manage tasks per board)
-- Task CRUD (create, edit, move between columns, delete)
-- Drag & drop de tareas entre estados del Kanban
-- AI task description generation from task title
-- Real-time task synchronization by board (status and changes across open clients)
-- Persistent tasks in InsForge Postgres with RLS per user
+It includes authentication, multi-board organization, task CRUD, drag-and-drop status updates, AI-assisted task descriptions, and real-time synchronization.
 
-## 1. Install dependencies
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Database Setup (Schema + RLS)](#database-setup-schema--rls)
+- [Available Scripts](#available-scripts)
+- [Application Routes](#application-routes)
+- [Project Structure](#project-structure)
+- [Security Model](#security-model)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap Ideas](#roadmap-ideas)
+
+## Features
+
+- Email/password authentication with verification-aware flow (`code` or `link`)
+- OAuth login support (GitHub and Google)
+- Multi-board Kanban workflow (create, switch, and delete boards)
+- Task management with title, description, status, priority, and due date
+- Drag-and-drop movement across Kanban columns
+- AI-generated task descriptions from task title
+- Real-time updates per board across active clients
+- Per-user data isolation with PostgreSQL Row-Level Security (RLS)
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript
+- **UI:** React 19 + Tailwind CSS 4
+- **Backend Services:** InsForge (Auth, Postgres, Realtime, AI)
+- **Linting:** ESLint
+
+## Getting Started
+
+### 1. Prerequisites
+
+- Node.js 20+
+- npm
+- An InsForge project with auth and database enabled
+
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
-## 2. Configure environment variables
+### 3. Create local environment file
 
-Copy `.env.example` to `.env.local` and add your InsForge values:
+Create `.env.local` in the project root:
 
 ```bash
-cp .env.example .env.local
+touch .env.local
 ```
 
-Required variables:
+Then add:
 
-- `NEXT_PUBLIC_INSFORGE_URL`
-- `NEXT_PUBLIC_INSFORGE_ANON_KEY`
-- `NEXT_PUBLIC_INSFORGE_AI_MODEL` (optional, recommended to pin a specific active AI model ID)
+```env
+NEXT_PUBLIC_INSFORGE_URL=https://your-project.insforge.app
+NEXT_PUBLIC_INSFORGE_ANON_KEY=your_anon_key
+NEXT_PUBLIC_INSFORGE_AI_MODEL=openai/gpt-5-mini
+```
 
-> Use real InsForge project values; placeholder values (for example `your-project.insforge.app`) will fail auth/network requests.
+> `NEXT_PUBLIC_INSFORGE_AI_MODEL` is optional, but recommended to pin a known active model.
 
-## 3. Configure backend schema + RLS
+### 4. Apply database schema
 
-Apply the SQL in `insforge/schema.sql` to your InsForge database.
-
-Example:
+Run the SQL in `insforge/schema.sql` in your InsForge project:
 
 ```bash
 npx @insforge/cli db query "$(cat insforge/schema.sql)"
 ```
 
-This creates:
+You can also run it manually from your database SQL editor.
 
-- `boards` table (per-user Kanban boards)
-- `tasks` table
-- `profiles` table linked to `auth.users`
-- indexes for Kanban querying
-- row-level security policies tied to `auth.uid()` (forced RLS)
-- explicit grants so `anon` has no access and `authenticated` has scoped CRUD
-- `updated_at` trigger using a local `plpgsql` trigger function
-
-## 4. Run the app
+### 5. Start development server
 
 ```bash
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open [http://localhost:3000](http://localhost:3000).
 
-Rutas principales:
+## Environment Variables
 
-- `http://localhost:3000/login` para autenticación
-- `http://localhost:3000/register` para registro
-- `http://localhost:3000/` para el board Kanban autenticado
+| Variable | Required | Description |
+| --- | --- | --- |
+| `NEXT_PUBLIC_INSFORGE_URL` | Yes | Base URL of your InsForge project |
+| `NEXT_PUBLIC_INSFORGE_ANON_KEY` | Yes | Public anonymous key used by the frontend |
+| `NEXT_PUBLIC_INSFORGE_AI_MODEL` | No | AI model ID used for description generation |
 
-## Notes
+## Database Setup (Schema + RLS)
 
-- Auth UI reads InsForge public auth config from `/api/auth/public-config` to align with backend settings.
-- Task description AI generation uses `insforge.ai.chat.completions.create` with **GPT-5 mini** (`NEXT_PUBLIC_INSFORGE_AI_MODEL` if it points to GPT-5 mini, otherwise fallback to `openai/gpt-5-mini`).
-- Real-time sync uses InsForge channels (`board:%`) plus DB trigger publish via `realtime.publish` from `tasks` changes.
-- If verification method is `code`, users can verify directly in the app.
-- If verification method is `link`, users receive a verification link and then sign in.
-- Current backend auth metadata: email verification required, verify method `code`, reset method `code`, OAuth providers: GitHub and Google.
+`insforge/schema.sql` configures:
+
+- `boards`, `tasks`, and `profiles` tables
+- indexes for board/task query performance
+- automatic `updated_at` triggers
+- strict RLS policies bound to `auth.uid()`
+- scoped grants (`authenticated` allowed, `anon` denied)
+- realtime channel + publish trigger for board-level task events
+
+## Available Scripts
+
+```bash
+npm run dev    # Start local dev server
+npm run lint   # Run ESLint
+npm run build  # Create production build
+npm run start  # Start production server
+```
+
+## Application Routes
+
+- `/login` — Sign in
+- `/register` — Sign up
+- `/` — Authenticated Kanban workspace
+
+## Project Structure
+
+```text
+app/
+  components/kanban/   # Board, columns, cards, auth screen
+  hooks/               # Kanban, auth, realtime logic
+  login/               # Login page
+  register/            # Register page
+insforge/
+  schema.sql           # Database schema, RLS, realtime triggers/policies
+lib/
+  insforge/            # InsForge client and helpers
+```
+
+## Security Model
+
+- All board/task/profile access is scoped per authenticated user.
+- RLS is enabled and forced on core tables.
+- Realtime channel read permissions are limited to channels linked to the user’s boards.
+
+## Troubleshooting
+
+- **Invalid InsForge environment variables:** verify URL/key are real project values.
+- **Auth appears misconfigured:** ensure InsForge auth settings match your expected verification method.
+- **No realtime updates:** confirm schema was fully applied and realtime policies/triggers were created.
+- **AI generation fails:** confirm the selected model is active in your InsForge project.
+
+## Roadmap Ideas
+
+- Team workspaces and shared boards
+- Task comments and activity timeline
+- Attachments per task
+- Board templates and task recurrence
+- Filters, saved views, and search

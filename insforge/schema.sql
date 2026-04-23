@@ -14,15 +14,33 @@ CREATE TABLE IF NOT EXISTS tasks (
   board_id UUID,
   title TEXT NOT NULL CHECK (char_length(trim(title)) > 0),
   description TEXT,
-  status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'done')),
+  status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('backlog', 'todo', 'in_progress', 'done')),
   priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   due_date TIMESTAMPTZ,
+  checklist JSONB NOT NULL DEFAULT '[]'::jsonb,
   position INTEGER NOT NULL DEFAULT 0 CHECK (position >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS board_id UUID;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS checklist JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'tasks_status_check'
+      AND conrelid = 'tasks'::regclass
+  ) THEN
+    ALTER TABLE tasks DROP CONSTRAINT tasks_status_check;
+  END IF;
+  ALTER TABLE tasks
+    ADD CONSTRAINT tasks_status_check
+    CHECK (status IN ('backlog', 'todo', 'in_progress', 'done'));
+END;
+$$;
 
 CREATE TABLE IF NOT EXISTS profiles (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,

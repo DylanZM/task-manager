@@ -21,23 +21,11 @@ export default function Home() {
     isCreatingBoard,
 
     // Task State
+    tasks,
     groupedTasks,
     isLoadingTasks,
     taskError,
-    isGeneratingNewDescription,
     isGeneratingEditingDescription,
-
-    // New Task State
-    newTaskTitle,
-    setNewTaskTitle,
-    newTaskDescription,
-    setNewTaskDescription,
-    newTaskStatus,
-    setNewTaskStatus,
-    newTaskPriority,
-    setNewTaskPriority,
-    newTaskDueDate,
-    setNewTaskDueDate,
 
     // Editing State
     editingTaskId,
@@ -52,6 +40,7 @@ export default function Home() {
     setEditingPriority,
     editingDueDate,
     setEditingDueDate,
+    editingChecklist,
 
     handleSignOut,
     handleCreateBoard,
@@ -64,6 +53,10 @@ export default function Home() {
     openEditor,
     saveEditor,
     handleAiGenerate,
+    addEditingChecklistItem,
+    toggleEditingChecklistItem,
+    removeEditingChecklistItem,
+    toggleChecklistItem,
   } = useKanbanLogic();
 
   useEffect(() => {
@@ -108,16 +101,6 @@ export default function Home() {
             userEmail={user.email}
             selectedBoard={selectedBoard}
             selectedBoardId={selectedBoardId}
-            newTaskTitle={newTaskTitle}
-            setNewTaskTitle={setNewTaskTitle}
-            newTaskDescription={newTaskDescription}
-            setNewTaskDescription={setNewTaskDescription}
-            newTaskStatus={newTaskStatus}
-            setNewTaskStatus={setNewTaskStatus}
-            newTaskPriority={newTaskPriority}
-            setNewTaskPriority={setNewTaskPriority}
-            newTaskDueDate={newTaskDueDate}
-            setNewTaskDueDate={setNewTaskDueDate}
             editingTaskId={editingTaskId}
             editingTitle={editingTitle}
             setEditingTitle={setEditingTitle}
@@ -129,19 +112,23 @@ export default function Home() {
             setEditingPriority={setEditingPriority}
             editingDueDate={editingDueDate}
             setEditingDueDate={setEditingDueDate}
+            editingChecklist={editingChecklist}
+            tasks={tasks}
             groupedTasks={groupedTasks}
             isLoadingTasks={isLoadingTasks}
-            isGeneratingNewDescription={isGeneratingNewDescription}
             isGeneratingEditingDescription={isGeneratingEditingDescription}
             onCreateTask={handleCreateTask}
             onSaveEditor={saveEditor}
             onCloseEditor={() => setEditingTaskId(null)}
-            onGenerateNewDescription={() => void generateTaskDescription("new")}
             onGenerateEditingDescription={() => void generateTaskDescription("edit")}
             onUpdateTaskStatus={(taskId, status) => void updateTask(taskId, { status })}
             onOpenEditor={openEditor}
             onDeleteTask={(taskId) => void handleDeleteTask(taskId)}
             onAiGenerate={handleAiGenerate}
+            onAddEditingChecklistItem={addEditingChecklistItem}
+            onToggleEditingChecklistItem={toggleEditingChecklistItem}
+            onRemoveEditingChecklistItem={removeEditingChecklistItem}
+            onToggleChecklistItem={(taskId, itemId) => void toggleChecklistItem(taskId, itemId)}
           />
         </div>
       </div>

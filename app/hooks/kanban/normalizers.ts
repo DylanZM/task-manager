@@ -1,4 +1,4 @@
-import { AuthConfig, Board, Task } from "@/lib/task-types";
+import { AuthConfig, Board, Task, TaskChecklistItem } from "@/lib/task-types";
 import { AuthUser } from "@/app/hooks/kanban/types";
 
 export const DEFAULT_AUTH_CONFIG: AuthConfig = {
@@ -37,10 +37,10 @@ export const toSafeBoards = (value: unknown): Board[] => {
 
 export const toSafeTasks = (value: unknown): Task[] => {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is Task => {
-    if (!item || typeof item !== "object") return false;
-    const task = item as Partial<Task>;
-    return (
+  return value.reduce<Task[]>((acc, item) => {
+    if (!item || typeof item !== "object") return acc;
+    const task = item as Partial<Task> & { checklist?: unknown };
+    const isShapeValid =
       typeof task.id === "string" &&
       typeof task.user_id === "string" &&
       typeof task.board_id === "string" &&
@@ -51,9 +51,43 @@ export const toSafeTasks = (value: unknown): Task[] => {
       (task.due_date === null || typeof task.due_date === "string") &&
       typeof task.position === "number" &&
       typeof task.created_at === "string" &&
-      typeof task.updated_at === "string"
-    );
-  });
+      typeof task.updated_at === "string";
+
+    if (!isShapeValid) return acc;
+    const safeTask = task as Omit<Task, "checklist"> & { checklist?: unknown };
+
+    const checklist = Array.isArray(safeTask.checklist)
+      ? safeTask.checklist.reduce<TaskChecklistItem[]>((items, checklistItem) => {
+          if (!checklistItem || typeof checklistItem !== "object") return items;
+          const candidate = checklistItem as Partial<TaskChecklistItem>;
+          if (
+            typeof candidate.id !== "string" ||
+            typeof candidate.text !== "string" ||
+            typeof candidate.done !== "boolean"
+          ) {
+            return items;
+          }
+          items.push(candidate as TaskChecklistItem);
+          return items;
+        }, [])
+      : [];
+
+    acc.push({
+      id: safeTask.id,
+      user_id: safeTask.user_id,
+      board_id: safeTask.board_id,
+      title: safeTask.title,
+      description: safeTask.description ?? null,
+      status: safeTask.status,
+      priority: safeTask.priority,
+      due_date: safeTask.due_date ?? null,
+      checklist,
+      position: safeTask.position,
+      created_at: safeTask.created_at,
+      updated_at: safeTask.updated_at,
+    });
+    return acc;
+  }, []);
 };
 
 export const toDateInputValue = (isoDate: string | null) => (isoDate ? isoDate.slice(0, 10) : "");

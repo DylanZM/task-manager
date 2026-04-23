@@ -16,6 +16,7 @@ interface TaskColumnProps {
   onOpenEditor: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onUpdateStatus: (taskId: string, status: TaskStatus) => void;
+  onToggleChecklistItem: (taskId: string, itemId: string) => void;
   onCreateTask: (event: React.FormEvent<HTMLFormElement> | TaskStatus | QuickTaskInput) => void;
   onAiGenerate: (title: string) => Promise<string | null>;
 }
@@ -43,7 +44,16 @@ const COLUMN_CONFIG: Record<TaskStatus, { label: string; icon: LucideIcon; color
   },
 };
 
-export function TaskColumn({ status, tasks, onOpenEditor, onDeleteTask, onUpdateStatus, onCreateTask, onAiGenerate }: TaskColumnProps) {
+export function TaskColumn({
+  status,
+  tasks,
+  onOpenEditor,
+  onDeleteTask,
+  onUpdateStatus,
+  onToggleChecklistItem,
+  onCreateTask,
+  onAiGenerate,
+}: TaskColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -188,6 +198,7 @@ export function TaskColumn({ status, tasks, onOpenEditor, onDeleteTask, onUpdate
               onOpenEditor={onOpenEditor}
               onDeleteTask={onDeleteTask}
               onUpdateStatus={onUpdateStatus}
+              onToggleChecklistItem={onToggleChecklistItem}
             />
           ))
         ) : !isAdding && (

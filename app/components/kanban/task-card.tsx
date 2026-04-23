@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Pencil, Trash2 } from "lucide-react";
+import { Calendar, Check, Pencil, Trash2 } from "lucide-react";
 import { Task, TaskPriority, TaskStatus } from "@/lib/task-types";
 import { Card, Badge } from "@/app/components/ui/card-badge";
 import { Button } from "@/app/components/ui/button";
@@ -10,6 +10,7 @@ interface TaskCardProps {
   onOpenEditor: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onUpdateStatus: (taskId: string, status: TaskStatus) => void;
+  onToggleChecklistItem: (taskId: string, itemId: string) => void;
 }
 
 const PRIORITY_VARIANTS: Record<TaskPriority, "zinc" | "amber" | "red" | "green" | "blue"> = {
@@ -19,13 +20,15 @@ const PRIORITY_VARIANTS: Record<TaskPriority, "zinc" | "amber" | "red" | "green"
 };
 
 const STATUS_OPTIONS: { label: string; value: TaskStatus }[] = [
+  { label: "Backlog", value: "backlog" },
   { label: "Pendiente", value: "todo" },
   { label: "En curso", value: "in_progress" },
   { label: "Completado", value: "done" },
 ];
 
-export function TaskCard({ task, onOpenEditor, onDeleteTask, onUpdateStatus }: TaskCardProps) {
+export function TaskCard({ task, onOpenEditor, onDeleteTask, onUpdateStatus, onToggleChecklistItem }: TaskCardProps) {
   const isPastDue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "done";
+  const checklistDone = task.checklist.filter((item) => item.done).length;
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData("application/x-task-id", task.id);
@@ -72,6 +75,36 @@ export function TaskCard({ task, onOpenEditor, onDeleteTask, onUpdateStatus }: T
         <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed mb-4">
           {task.description}
         </p>
+      )}
+
+      {task.checklist.length > 0 && (
+        <div className="mb-4 rounded-xl border border-zinc-100 bg-zinc-50/60 p-2.5">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+            Checklist {checklistDone}/{task.checklist.length}
+          </p>
+          <div className="space-y-1.5">
+            {task.checklist.slice(0, 3).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onToggleChecklistItem(task.id, item.id)}
+                className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-xs hover:bg-white"
+              >
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded border ${
+                    item.done ? "border-emerald-500 bg-emerald-500 text-white" : "border-zinc-300 bg-white"
+                  }`}
+                >
+                  {item.done ? <Check className="h-3 w-3" /> : null}
+                </span>
+                <span className={item.done ? "line-through text-zinc-400" : "text-zinc-600"}>{item.text}</span>
+              </button>
+            ))}
+            {task.checklist.length > 3 && (
+              <p className="text-[10px] font-medium text-zinc-400">+{task.checklist.length - 3} subtareas más</p>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="mt-auto flex items-center justify-between border-t border-zinc-100 pt-3">
