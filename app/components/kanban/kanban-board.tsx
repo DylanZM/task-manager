@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Columns3 } from "lucide-react";
 import { Board, Task, TaskChecklistItem, TaskPriority, TaskStatus } from "@/lib/task-types";
 import { QuickTaskInput } from "@/app/hooks/kanban/types";
@@ -9,6 +9,7 @@ import { TaskColumn } from "./task-column";
 import { KanbanBoardHeader } from "./kanban-board-header";
 import { KanbanCalendarView } from "./kanban-calendar-view";
 import { TaskEditorModal } from "./task-editor-modal";
+import { DueTaskAlert } from "./due-task-alert";
 import { AppNotification, DueFilter, ViewMode, STATUS_OPTIONS } from "./kanban-board-constants";
 
 type Props = {
@@ -104,6 +105,10 @@ export function KanbanBoard({
   const [priorityFilter, setPriorityFilter] = useState<"all" | TaskPriority>("all");
   const [dueFilter, setDueFilter] = useState<DueFilter>("all");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>([]);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<string[]>([]);
+  const [emailErrorNotifications, setEmailErrorNotifications] = useState<AppNotification[]>([]);
+  const sendingEmailKeysRef = useRef<Set<string>>(new Set());
 
   const filteredTasks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -169,36 +174,145 @@ export function KanbanBoard({
 
   const noDueTasks = useMemo(() => filteredTasks.filter((task) => !task.due_date), [filteredTasks]);
 
-  const notifications = useMemo(() => {
+  const dueSoonNotifications = useMemo(() => {
     const now = new Date();
-    const alerts: AppNotification[] = [];
-    const overdueTasks = tasks.filter((task) => {
-      if (!task.due_date || task.status === "done") return false;
-      return new Date(task.due_date) < now;
-    });
-    const soonTasks = tasks.filter((task) => {
-      if (!task.due_date || task.status === "done") return false;
-      const due = new Date(task.due_date);
-      return due >= now && due.getTime() - now.getTime() <= 24 * 60 * 60 * 1000;
-    });
-    const doneTasks = tasks.filter((task) => task.status === "done");
-
-    overdueTasks.slice(0, 6).forEach((task) => {
-      alerts.push({ id: `overdue-${task.id}`, kind: "warning", message: `Tarea vencida: ${task.title}` });
-    });
-    soonTasks.slice(0, 6).forEach((task) => {
-      alerts.push({ id: `soon-${task.id}`, kind: "warning", message: `Vence pronto: ${task.title}` });
-    });
-    doneTasks.slice(0, 4).forEach((task) => {
-      alerts.push({ id: `done-${task.id}`, kind: "success", message: `Completada: ${task.title}` });
-    });
-    if (alerts.length === 0) {
-      alerts.push({ id: "sync-info", kind: "info", message: "Todo en orden. No hay alertas pendientes." });
-    }
-    return alerts;
+    return tasks
+      .filter((task) => {
+        if (!task.due_date || task.status === "done") return false;
+        const due = new Date(task.due_date);
+        return due >= now && due.getTime() - now.getTime() <= 24 * 60 * 60 * 1000;
+      })
+      .slice(0, 6)
+      .map<AppNotification>((task) => ({
+        id: `soon-${task.id}-${task.due_date ?? "none"}`,
+        kind: "warning",
+        message: `Se vence pronto: ${task.title}`,
+        taskId: task.id,
+        dueDate: task.due_date,
+      }));
   }, [tasks]);
 
-  const unreadNotifications = showNotifications ? 0 : notifications.length;
+  const overdueNotifications = useMemo(() => {
+    const now = new Date();
+    return tasks
+      .filter((task) => {
+        if (!task.due_date || task.status === "done") return false;
+        return new Date(task.due_date) < now;
+      })
+      .slice(0, 6)
+      .map<AppNotification>((task) => ({
+        id: `overdue-${task.id}-${task.due_date ?? "none"}`,
+        kind: "warning",
+        message: `Tarea vencida: ${task.title}`,
+        taskId: task.id,
+        dueDate: task.due_date,
+      }));
+  }, [tasks]);
+
+  const notifications = useMemo(
+    () => [...overdueNotifications, ...dueSoonNotifications, ...emailErrorNotifications],
+    [dueSoonNotifications, emailErrorNotifications, overdueNotifications],
+  );
+
+  const unreadNotifications = useMemo(() => {
+    if (showNotifications) return 0;
+    const seenSet = new Set(seenNotificationIds);
+    return notifications.filter((notification) => !seenSet.has(notification.id)).length;
+  }, [notifications, seenNotificationIds, showNotifications]);
+
+  const dueAlert = useMemo(
+    () => dueSoonNotifications.find((notification) => !dismissedAlertIds.includes(notification.id)) ?? null,
+    [dismissedAlertIds, dueSoonNotifications],
+  );
+
+  const toggleNotifications = () => {
+    setShowNotifications((current) => {
+      const next = !current;
+      if (next) {
+        setSeenNotificationIds((previous) =>
+          Array.from(new Set([...previous, ...notifications.map((notification) => notification.id)])),
+        );
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined" || dueSoonNotifications.length === 0) return;
+
+    const storageKey = "due-email-notifications-sent";
+    const parsedStoredKeys = (() => {
+      try {
+        const raw = window.localStorage.getItem(storageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : []);
+      } catch {
+        return new Set<string>();
+      }
+    })();
+
+    const sendEmailForDueTask = async (notification: AppNotification) => {
+      if (!notification.taskId || !notification.dueDate) return;
+      const emailKey = `${notification.taskId}:${notification.dueDate}`;
+      if (parsedStoredKeys.has(emailKey) || sendingEmailKeysRef.current.has(emailKey)) return;
+
+      sendingEmailKeysRef.current.add(emailKey);
+      try {
+        const response = await fetch("/api/notifications/due-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: userEmail,
+            boardName: selectedBoard?.name ?? "Kanban Board",
+            taskId: notification.taskId,
+            taskTitle: notification.message.replace("Se vence pronto: ", ""),
+            dueDate: notification.dueDate,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = (await response.json().catch(() => ({}))) as { error?: string };
+          const errorMessage = data.error ?? "No se pudo enviar el correo de recordatorio.";
+          setEmailErrorNotifications((previous) => {
+            const id = `email-error-${emailKey}`;
+            if (previous.some((notificationItem) => notificationItem.id === id)) return previous;
+            return [
+              ...previous,
+              {
+                id,
+                kind: "warning",
+                message: `${errorMessage} (${notification.message})`,
+              },
+            ];
+          });
+          return;
+        }
+
+        parsedStoredKeys.add(emailKey);
+        window.localStorage.setItem(storageKey, JSON.stringify(Array.from(parsedStoredKeys)));
+      } catch {
+        setEmailErrorNotifications((previous) => {
+          const id = `email-error-${emailKey}`;
+          if (previous.some((notificationItem) => notificationItem.id === id)) return previous;
+          return [
+            ...previous,
+            {
+              id,
+              kind: "warning",
+              message: `Error de red al enviar recordatorio por email (${notification.message}).`,
+            },
+          ];
+        });
+      } finally {
+        sendingEmailKeysRef.current.delete(emailKey);
+      }
+    };
+
+    dueSoonNotifications.forEach((notification) => {
+      void sendEmailForDueTask(notification);
+    });
+  }, [dueSoonNotifications, selectedBoard?.name, userEmail]);
+
   const activeGroupedTasks = query || priorityFilter !== "all" || dueFilter !== "all" ? filteredGroupedTasks : groupedTasks;
 
   if (!selectedBoardId) {
@@ -223,7 +337,7 @@ export function KanbanBoard({
         viewMode={viewMode}
         onSetViewMode={setViewMode}
         showNotifications={showNotifications}
-        onToggleNotifications={() => setShowNotifications((prev) => !prev)}
+        onToggleNotifications={toggleNotifications}
         unreadNotifications={unreadNotifications}
         query={query}
         onSetQuery={setQuery}
@@ -233,6 +347,13 @@ export function KanbanBoard({
         onSetDueFilter={setDueFilter}
         notifications={notifications}
       />
+
+      {dueAlert && (
+        <DueTaskAlert
+          message={dueAlert.message}
+          onDismiss={() => setDismissedAlertIds((previous) => [...previous, dueAlert.id])}
+        />
+      )}
 
       {viewMode === "kanban" ? (
         <div className="grid grid-cols-1 gap-6 pb-6 md:grid-cols-2 xl:grid-cols-4">

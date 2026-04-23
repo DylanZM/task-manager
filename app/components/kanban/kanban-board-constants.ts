@@ -7,6 +7,8 @@ export type AppNotification = {
   id: string;
   message: string;
   kind: "info" | "success" | "warning";
+  taskId?: string;
+  dueDate?: string | null;
 };
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {

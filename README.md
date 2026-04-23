@@ -94,6 +94,10 @@ Open [http://localhost:3000](http://localhost:3000).
 | `NEXT_PUBLIC_INSFORGE_URL` | Yes | Base URL of your InsForge project |
 | `NEXT_PUBLIC_INSFORGE_ANON_KEY` | Yes | Public anonymous key used by the frontend |
 | `NEXT_PUBLIC_INSFORGE_AI_MODEL` | No | AI model ID used for description generation |
+| `RESEND_API_KEY` | No* | Server key for due-date email notifications |
+| `NOTIFICATION_FROM_EMAIL` | No* | Sender email used by Resend (for due-date reminders) |
+
+\* Required only if you want automatic due-date email reminders enabled.
 
 ## Database Setup (Schema + RLS)
 
