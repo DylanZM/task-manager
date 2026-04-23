@@ -32,6 +32,8 @@ Required variables:
 - `NEXT_PUBLIC_INSFORGE_ANON_KEY`
 - `NEXT_PUBLIC_INSFORGE_AI_MODEL` (optional, recommended to pin a specific active AI model ID)
 
+> Use real InsForge project values; placeholder values (for example `your-project.insforge.app`) will fail auth/network requests.
+
 ## 3. Configure backend schema + RLS
 
 Apply the SQL in `insforge/schema.sql` to your InsForge database.

@@ -6,7 +6,7 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
   passwordMinLength: 8,
   verifyEmailMethod: "code",
   resetPasswordMethod: "link",
-  oAuthProviders: [],
+  oAuthProviders: ["github", "google"],
 };
 
 export const toSafeUser = (value: unknown): AuthUser | null => {

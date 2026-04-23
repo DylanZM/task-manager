@@ -98,11 +98,8 @@ export function AuthScreen({
   const isAnyOAuthLoading = Boolean(oauthLoadingProvider);
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-50 p-6 selection:bg-zinc-950 selection:text-white">
-      <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-zinc-200/50 blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-zinc-200/50 blur-3xl" />
-
-      <div className="relative z-10 w-full max-w-[420px]">
+    <main className="flex min-h-screen items-center justify-center bg-white p-6 selection:bg-zinc-950 selection:text-white">
+      <div className="w-full max-w-[420px]">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-950 text-white shadow-xl shadow-zinc-200">
             <Layout className="h-7 w-7" />

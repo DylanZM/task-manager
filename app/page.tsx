@@ -74,10 +74,10 @@ export default function Home() {
 
   if (isLoadingAuth || !user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-100/50 backdrop-blur-sm text-zinc-900">
+      <main className="flex min-h-screen items-center justify-center bg-white text-zinc-900">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950" />
-          <p className="rounded-xl border border-zinc-200 bg-white/80 px-4 py-2 text-sm font-medium shadow-sm backdrop-blur-md">
+          <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium shadow-sm">
             Cargando tablero...
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50 text-zinc-950 selection:bg-zinc-950 selection:text-white">
+    <main className="min-h-screen bg-white text-zinc-950 selection:bg-zinc-950 selection:text-white">
       <div className="mx-auto w-full max-w-[1440px] grid grid-cols-1 gap-8 p-6 lg:grid-cols-[280px_1fr] lg:p-10 lg:gap-12">
         <div className="min-w-0">
           <BoardSidebar

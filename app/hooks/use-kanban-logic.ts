@@ -86,22 +86,26 @@ export function useKanbanLogic() {
 
   const fetchAuthConfig = useCallback(async () => {
     const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL;
-    if (!baseUrl) return;
-    const response = await fetch(`${baseUrl}/api/auth/public-config`);
-    if (!response.ok) throw new Error("Failed to load auth configuration.");
-    const config = (await response.json()) as Partial<AuthConfig>;
-    setAuthConfig({
-      requireEmailVerification: Boolean(config.requireEmailVerification),
-      passwordMinLength:
-        typeof config.passwordMinLength === "number"
-          ? config.passwordMinLength
-          : DEFAULT_AUTH_CONFIG.passwordMinLength,
-      verifyEmailMethod: config.verifyEmailMethod === "link" ? "link" : "code",
-      resetPasswordMethod: config.resetPasswordMethod === "code" ? "code" : "link",
-      oAuthProviders: Array.isArray(config.oAuthProviders)
-        ? config.oAuthProviders.filter((provider): provider is string => typeof provider === "string")
-        : [],
-    });
+    if (!baseUrl || baseUrl.includes("your-project.insforge.app")) return;
+    try {
+      const response = await fetch(`${baseUrl}/api/auth/public-config`, { cache: "no-store" });
+      if (!response.ok) return;
+      const config = (await response.json()) as Partial<AuthConfig>;
+      setAuthConfig({
+        requireEmailVerification: Boolean(config.requireEmailVerification),
+        passwordMinLength:
+          typeof config.passwordMinLength === "number"
+            ? config.passwordMinLength
+            : DEFAULT_AUTH_CONFIG.passwordMinLength,
+        verifyEmailMethod: config.verifyEmailMethod === "link" ? "link" : "code",
+        resetPasswordMethod: config.resetPasswordMethod === "code" ? "code" : "link",
+        oAuthProviders: Array.isArray(config.oAuthProviders)
+          ? config.oAuthProviders.filter((provider): provider is string => typeof provider === "string")
+          : DEFAULT_AUTH_CONFIG.oAuthProviders,
+      });
+    } catch {
+      // Keep local defaults when auth metadata endpoint is unreachable.
+    }
   }, []);
 
   const loadCurrentUser = useCallback(async (client: ReturnType<typeof getInsforgeClient>) => {
@@ -196,12 +200,7 @@ export function useKanbanLogic() {
   useEffect(() => {
     if (!insforge) return;
     void (async () => {
-      try {
-        await fetchAuthConfig();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to load auth config.";
-        setAuthError(message);
-      }
+      await fetchAuthConfig();
       const currentUser = await loadCurrentUser(insforge);
       if (currentUser) {
         await ensureProfile(insforge, currentUser);
