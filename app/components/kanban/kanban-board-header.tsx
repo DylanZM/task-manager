@@ -1,23 +1,27 @@
 "use client";
 
-import { Calendar, Search } from "lucide-react";
+import { Bell, Calendar, Search } from "lucide-react";
 import { TaskPriority } from "@/lib/task-types";
 import { Button } from "@/app/components/ui/button";
 import { Input, Select } from "@/app/components/ui/form";
-import { Badge } from "@/app/components/ui/card-badge";
-import { DueFilter, ViewMode } from "./kanban-board-constants";
+import { Badge, Card } from "@/app/components/ui/card-badge";
+import { AppNotification, DueFilter, ViewMode } from "./kanban-board-constants";
 
 type Props = {
   userEmail: string;
   boardName: string | null;
   viewMode: ViewMode;
   onSetViewMode: (mode: ViewMode) => void;
+  showNotifications: boolean;
+  onToggleNotifications: () => void;
+  unreadNotifications: number;
   query: string;
   onSetQuery: (value: string) => void;
   priorityFilter: "all" | TaskPriority;
   onSetPriorityFilter: (value: "all" | TaskPriority) => void;
   dueFilter: DueFilter;
   onSetDueFilter: (value: DueFilter) => void;
+  notifications: AppNotification[];
 };
 
 export function KanbanBoardHeader({
@@ -25,15 +29,19 @@ export function KanbanBoardHeader({
   boardName,
   viewMode,
   onSetViewMode,
+  showNotifications,
+  onToggleNotifications,
+  unreadNotifications,
   query,
   onSetQuery,
   priorityFilter,
   onSetPriorityFilter,
   dueFilter,
   onSetDueFilter,
+  notifications,
 }: Props) {
   return (
-    <header className="flex flex-col gap-4">
+    <header className="relative flex flex-col gap-4">
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <div>
           <div className="flex items-center gap-2.5">
@@ -62,6 +70,21 @@ export function KanbanBoardHeader({
             leftIcon={Calendar}
           >
             Calendario
+          </Button>
+          <Button
+            type="button"
+            variant={showNotifications ? "secondary" : "outline"}
+            size="icon"
+            onClick={onToggleNotifications}
+            className="relative"
+            title="Notificaciones"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadNotifications > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                {unreadNotifications > 9 ? "9+" : unreadNotifications}
+              </span>
+            )}
           </Button>
         </div>
       </div>
@@ -98,6 +121,36 @@ export function KanbanBoardHeader({
           ]}
         />
       </div>
+
+      {showNotifications && (
+        <Card className="absolute right-0 top-full z-20 mt-2 w-full max-w-md p-3 shadow-2xl shadow-zinc-950/10 md:w-[430px]">
+          <div className="mb-3 border-b border-zinc-100 pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Notificaciones</h3>
+          </div>
+          <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+            {notifications.length === 0 ? (
+              <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">
+                Sin notificaciones activas.
+              </p>
+            ) : (
+              notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`rounded-xl border p-2.5 text-xs ${
+                    notification.kind === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : notification.kind === "warning"
+                        ? "border-amber-200 bg-amber-50 text-amber-700"
+                        : "border-blue-200 bg-blue-50 text-blue-700"
+                  }`}
+                >
+                  <p className="font-medium">{notification.message}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      )}
     </header>
   );
 }

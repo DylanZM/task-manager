@@ -9,7 +9,6 @@ import { TaskColumn } from "./task-column";
 import { KanbanBoardHeader } from "./kanban-board-header";
 import { KanbanCalendarView } from "./kanban-calendar-view";
 import { TaskEditorModal } from "./task-editor-modal";
-import { DueTaskAlert } from "./due-task-alert";
 import { AppNotification, DueFilter, ViewMode, STATUS_OPTIONS } from "./kanban-board-constants";
 
 type Props = {
@@ -106,7 +105,6 @@ export function KanbanBoard({
   const [dueFilter, setDueFilter] = useState<DueFilter>("all");
   const [showNotifications, setShowNotifications] = useState(false);
   const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>([]);
-  const [dismissedAlertIds, setDismissedAlertIds] = useState<string[]>([]);
   const [emailErrorNotifications, setEmailErrorNotifications] = useState<AppNotification[]>([]);
   const sendingEmailKeysRef = useRef<Set<string>>(new Set());
 
@@ -219,11 +217,6 @@ export function KanbanBoard({
     const seenSet = new Set(seenNotificationIds);
     return notifications.filter((notification) => !seenSet.has(notification.id)).length;
   }, [notifications, seenNotificationIds, showNotifications]);
-
-  const dueAlert = useMemo(
-    () => dueSoonNotifications.find((notification) => !dismissedAlertIds.includes(notification.id)) ?? null,
-    [dismissedAlertIds, dueSoonNotifications],
-  );
 
   const toggleNotifications = () => {
     setShowNotifications((current) => {
@@ -347,13 +340,6 @@ export function KanbanBoard({
         onSetDueFilter={setDueFilter}
         notifications={notifications}
       />
-
-      {dueAlert && (
-        <DueTaskAlert
-          message={dueAlert.message}
-          onDismiss={() => setDismissedAlertIds((previous) => [...previous, dueAlert.id])}
-        />
-      )}
 
       {viewMode === "kanban" ? (
         <div className="grid grid-cols-1 gap-6 pb-6 md:grid-cols-2 xl:grid-cols-4">
