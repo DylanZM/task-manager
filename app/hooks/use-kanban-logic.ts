@@ -557,10 +557,23 @@ export function useKanbanLogic() {
     setEditingTaskId(null);
   }
 
-  function createChecklistItem(text: string): TaskChecklistItem {
-    const fallbackId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  function nextChecklistItemId(items: TaskChecklistItem[]): string {
+    const usedIds = new Set(items.map((item) => item.id));
+    const maxNumericId = items.reduce((max, item) => {
+      const parsed = Number.parseInt(item.id, 10);
+      return Number.isInteger(parsed) && parsed > max ? parsed : max;
+    }, 0);
+
+    let candidate = maxNumericId + 1;
+    while (usedIds.has(String(candidate))) {
+      candidate += 1;
+    }
+    return String(candidate);
+  }
+
+  function createChecklistItem(text: string, existingItems: TaskChecklistItem[]): TaskChecklistItem {
     return {
-      id: typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : fallbackId,
+      id: nextChecklistItemId(existingItems),
       text: text.trim(),
       done: false,
     };
@@ -569,7 +582,7 @@ export function useKanbanLogic() {
   function addEditingChecklistItem(text: string) {
     const value = text.trim();
     if (!value) return;
-    setEditingChecklist((prev) => [...prev, createChecklistItem(value)]);
+    setEditingChecklist((prev) => [...prev, createChecklistItem(value, prev)]);
   }
 
   function toggleEditingChecklistItem(itemId: string) {
