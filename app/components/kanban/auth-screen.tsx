@@ -1,6 +1,6 @@
 "use client";
 
-import { Layout, Lock, Mail } from "lucide-react";
+import { Layout } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/form";
@@ -99,18 +99,23 @@ export function AuthScreen({
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-white p-6 selection:bg-zinc-950 selection:text-white">
-      <div className="w-full max-w-[420px]">
+      <div className="w-full max-w-105">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-950 text-white shadow-xl shadow-zinc-200">
             <Layout className="h-7 w-7" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Kanban Flow</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-950">
+            Kanban Flow
+          </h1>
           <p className="mt-2 text-sm text-zinc-600">
             Simplifica tu flujo de trabajo con Inteligencia Artificial.
           </p>
         </div>
 
-        <Card className="overflow-hidden border-zinc-200/60 p-8 shadow-xl shadow-zinc-200/50">
+        <Card
+          glass
+          className="overflow-hidden border-zinc-200/60 bg-white p-8 shadow-xl shadow-zinc-200/50"
+        >
           <div className="mb-8 text-center">
             <h2 className="text-2xl font-black text-zinc-950">
               {needsVerificationCode
@@ -130,7 +135,10 @@ export function AuthScreen({
 
           {authMessage && (
             <div className="mb-4">
-              <Badge variant="amber" className="w-full justify-center py-2 text-center text-xs normal-case">
+              <Badge
+                variant="amber"
+                className="w-full justify-center py-2 text-center text-xs normal-case"
+              >
                 {authMessage}
               </Badge>
             </div>
@@ -150,12 +158,18 @@ export function AuthScreen({
                 label="Código de verificación"
                 required
                 value={verificationCode}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVerificationCode(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setVerificationCode(e.target.value)
+                }
                 placeholder="123456"
                 type="text"
-                className="text-center text-lg tracking-[0.5em] font-mono"
+                className="text-center text-lg tracking-[0.5em] font-mono shadow-none focus:ring-0"
               />
-              <Button type="submit" isLoading={isSubmittingAuth} className="w-full">
+              <Button
+                type="submit"
+                isLoading={isSubmittingAuth}
+                className="w-full"
+              >
                 Verificar cuenta
               </Button>
             </form>
@@ -169,9 +183,12 @@ export function AuthScreen({
                   <Input
                     label="Nombre completo"
                     value={displayName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDisplayName(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setDisplayName(e.target.value)
+                    }
                     placeholder="John Doe"
                     type="text"
+                    className="shadow-none focus:ring-0"
                   />
                 )}
                 <Input
@@ -180,21 +197,33 @@ export function AuthScreen({
                   type="email"
                   autoComplete="email"
                   value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEmail(e.target.value)
+                  }
                   placeholder="nombre@ejemplo.com"
+                  className="shadow-none focus:ring-0"
                 />
                 <Input
                   label="Contraseña"
                   required
                   type="password"
                   minLength={minPasswordLength}
-                  autoComplete={authMode === "login" ? "current-password" : "new-password"}
+                  autoComplete={
+                    authMode === "login" ? "current-password" : "new-password"
+                  }
                   value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setPassword(e.target.value)
+                  }
                   placeholder="••••••••"
+                  className="shadow-none focus:ring-0"
                 />
 
-                <Button type="submit" isLoading={isSubmittingAuth} className="w-full">
+                <Button
+                  type="submit"
+                  isLoading={isSubmittingAuth}
+                  className="w-full"
+                >
                   {authMode === "login" ? "Iniciar sesión" : "Crear cuenta"}
                 </Button>
               </form>
@@ -206,7 +235,9 @@ export function AuthScreen({
                       <div className="w-full border-t border-zinc-200" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-zinc-500 font-medium">O continúa con</span>
+                      <span className="bg-white px-2 text-zinc-500 font-medium">
+                        O continúa con
+                      </span>
                     </div>
                   </div>
 
@@ -246,25 +277,15 @@ export function AuthScreen({
           <div className="mt-8 text-center">
             <Link
               href={authMode === "login" ? "/register" : "/login"}
-              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-950"
+              className="text-sm font-medium text-zinc-600 transition-colors"
             >
-              {authMode === "login"
-                ? "¿No tienes una cuenta? Regístrate"
-                : "¿Ya tienes cuenta? Inicia sesión"}
+              {authMode === "login" ? "Regístrate" : "Iniciar sesión"}
             </Link>
           </div>
         </Card>
 
         <footer className="mt-8 flex items-center justify-center gap-4 text-zinc-400">
-          <div className="flex items-center gap-1.5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-default">
-            <Lock className="h-3 w-3" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Seguro</span>
-          </div>
           <div className="h-1 w-1 rounded-full bg-zinc-300" />
-          <div className="flex items-center gap-1.5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-default">
-            <Mail className="h-3 w-3" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Verificado</span>
-          </div>
         </footer>
       </div>
     </main>
