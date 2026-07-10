@@ -30,16 +30,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
 
-
-
-
-## Security
-
-- All data access is scoped per authenticated user.
-- Row-Level Security (RLS) is enforced on every table.
-- Realtime channels are restricted to the user's boards.
 
 ## Roadmap
 
