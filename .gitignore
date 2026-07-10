@@ -41,7 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 #json
-.skills-lock.json
+skills-lock.json
 
 # InsForge & AI agent skills
 .insforge
