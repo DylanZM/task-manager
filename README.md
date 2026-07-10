@@ -6,7 +6,6 @@ A modern, real-time Kanban board for managing tasks with drag-and-drop, AI-power
 
 ## Features
 
-- **Authentication** — email/password sign-up and login, plus OAuth with GitHub and Google
 - **Multi-board workspace** — create, switch between, and delete boards
 - **Kanban workflow** — drag tasks across columns (backlog, in progress, done)
 - **Task management** — set title, description, priority, and due dates
@@ -21,7 +20,7 @@ A modern, real-time Kanban board for managing tasks with drag-and-drop, AI-power
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
 | UI | React 19, Tailwind CSS 4 |
-| Backend | InsForge (Auth, Postgres, Realtime, AI) |
+| Backend | (Auth, Postgres, Realtime, AI) |
 | Linting | ESLint |
 
 ## Getting Started
@@ -33,7 +32,6 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Requires Node.js 20+ and an InsForge project with auth and database enabled. See [`README.private.md`](README.private.md) for full setup instructions.
 
 
 
