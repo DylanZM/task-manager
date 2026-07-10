@@ -46,6 +46,9 @@ skills-lock.json
 # private readme
 README.private.md
 
+# database schema (internal)
+/insforge/
+
 # InsForge & AI agent skills
 .insforge
 .agent
