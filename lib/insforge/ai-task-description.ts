@@ -62,15 +62,15 @@ export const extractCompletionText = (response: unknown) => {
 
 export const buildTaskDescriptionMessages = (title: string, strict = false) => {
   const baseSystem =
-    "Eres un asistente de productividad. Debes responder únicamente con una descripción de tarea en español, sin título, sin viñetas y sin comillas.";
+    "You are a productivity assistant. You must respond only with a task description in English, no title, no bullet points, and no quotes.";
   const strictSystem =
-    "Escribe una sola oración clara de 20 a 40 palabras, específica, accionable y orientada a resultados medibles.";
+    "Write a single clear sentence of 20 to 40 words, specific, actionable, and focused on measurable results.";
 
   return [
     { role: "system", content: strict ? `${baseSystem} ${strictSystem}` : baseSystem },
     {
       role: "user",
-      content: `Título de la tarea: ${title}. Genera una descripción profesional para un tablero Kanban.`,
+      content: `Task title: ${title}. Generate a professional description for a Kanban board.`,
     },
   ] as Array<{ role: "system" | "user"; content: string }>;
 };
@@ -78,4 +78,4 @@ export const buildTaskDescriptionMessages = (title: string, strict = false) => {
 export const isUsableDescription = (value: string) => value.trim().length >= 20;
 
 export const buildFallbackDescription = (title: string) =>
-  `Planificar, ejecutar y validar la tarea "${title}" definiendo entregables concretos, criterios de aceptación y seguimiento de resultados para asegurar su finalización con calidad.`;
+  `Plan, execute, and validate the task "${title}" by defining concrete deliverables, acceptance criteria, and results tracking to ensure quality completion.`;

@@ -234,7 +234,7 @@ export function useKanbanLogic() {
       const method = authConfig.verifyEmailMethod;
       setVerificationMethod(method);
       setPendingVerificationEmail(email);
-      setAuthMessage(method === "link" ? "Revisa tu correo y luego inicia sesión." : "Ingresa el código de verificación.");
+      setAuthMessage(method === "link" ? "Check your email and sign in." : "Enter the verification code.");
       return;
     }
     const signedUpUser = toSafeUser(data?.user);
@@ -446,10 +446,10 @@ export function useKanbanLogic() {
       const responseError =
         "error" in (response as object) ? (response as { error?: { message?: string } }).error : undefined;
       if (responseError) {
-        const message = responseError.message ?? "Error en la IA.";
+        const message = responseError.message ?? "AI error.";
         setTaskError(
           message.toLowerCase().includes("model")
-            ? "No se pudo usar GPT-5 mini. Verifica en InsForge Dashboard que el modelo esté activo y que NEXT_PUBLIC_INSFORGE_AI_MODEL apunte a ese model_id."
+            ? "Could not use GPT-5 mini. Verify in InsForge Dashboard that the model is active and NEXT_PUBLIC_INSFORGE_AI_MODEL points to that model_id."
             : message,
         );
         return null;
@@ -467,7 +467,7 @@ export function useKanbanLogic() {
 
       return buildFallbackDescription(title);
     } catch (error) {
-      setTaskError(error instanceof Error ? error.message : "Error al generar con IA.");
+      setTaskError(error instanceof Error ? error.message : "Error generating with AI.");
       return null;
     }
   }
@@ -475,7 +475,7 @@ export function useKanbanLogic() {
   async function generateTaskDescription(mode: "new" | "edit") {
     const title = (mode === "new" ? newTaskTitle : editingTitle).trim();
     if (!title) {
-      setTaskError("Escribe un título para generar la descripción con IA.");
+      setTaskError("Write a title to generate the AI description.");
       return;
     }
 

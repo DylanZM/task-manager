@@ -47,10 +47,10 @@ export function KanbanBoardHeader({
           <div className="flex items-center gap-2.5">
             <h2 className="text-2xl font-black tracking-tight text-zinc-950">{boardName}</h2>
             <Badge variant="blue" size="md" className="font-black bg-blue-100/50 text-blue-700">
-              Propio
+              Personal
             </Badge>
           </div>
-          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-zinc-400">Escritorio de {userEmail}</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-zinc-400">{userEmail}'s workspace</p>
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto">
@@ -69,7 +69,7 @@ export function KanbanBoardHeader({
             onClick={() => onSetViewMode("calendar")}
             leftIcon={Calendar}
           >
-            Calendario
+            Calendar
           </Button>
           <Button
             type="button"
@@ -77,7 +77,7 @@ export function KanbanBoardHeader({
             size="icon"
             onClick={onToggleNotifications}
             className="relative"
-            title="Notificaciones"
+            title="Notifications"
           >
             <Bell className="h-4 w-4" />
             {unreadNotifications > 0 && (
@@ -95,7 +95,7 @@ export function KanbanBoardHeader({
           <Input
             value={query}
             onChange={(event) => onSetQuery(event.target.value)}
-            placeholder="Buscar por título, descripción o subtarea..."
+            placeholder="Search by title, description or subtask..."
             className="pl-9"
           />
         </div>
@@ -103,21 +103,21 @@ export function KanbanBoardHeader({
           value={priorityFilter}
           onChange={(event) => onSetPriorityFilter(event.target.value as "all" | TaskPriority)}
           options={[
-            { label: "Prioridad: Todas", value: "all" },
-            { label: "Alta", value: "high" },
-            { label: "Media", value: "medium" },
-            { label: "Baja", value: "low" },
+            { label: "Priority: All", value: "all" },
+            { label: "High", value: "high" },
+            { label: "Medium", value: "medium" },
+            { label: "Low", value: "low" },
           ]}
         />
         <Select
           value={dueFilter}
           onChange={(event) => onSetDueFilter(event.target.value as DueFilter)}
           options={[
-            { label: "Fecha: Todas", value: "all" },
-            { label: "Vencidas", value: "overdue" },
-            { label: "Hoy", value: "today" },
-            { label: "Esta semana", value: "this_week" },
-            { label: "Sin fecha", value: "no_due" },
+            { label: "Date: All", value: "all" },
+            { label: "Overdue", value: "overdue" },
+            { label: "Today", value: "today" },
+            { label: "This week", value: "this_week" },
+            { label: "No date", value: "no_due" },
           ]}
         />
       </div>
@@ -125,12 +125,12 @@ export function KanbanBoardHeader({
       {showNotifications && (
         <Card className="absolute right-0 top-full z-20 mt-2 w-full max-w-md p-3 shadow-2xl shadow-zinc-950/10 md:w-[430px]">
           <div className="mb-3 border-b border-zinc-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Notificaciones</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Notifications</h3>
           </div>
           <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
             {notifications.length === 0 ? (
               <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">
-                Sin notificaciones activas.
+                No active notifications.
               </p>
             ) : (
               notifications.map((notification) => (

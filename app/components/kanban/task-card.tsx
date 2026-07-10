@@ -21,9 +21,9 @@ const PRIORITY_VARIANTS: Record<TaskPriority, "zinc" | "amber" | "red" | "green"
 
 const STATUS_OPTIONS: { label: string; value: TaskStatus }[] = [
   { label: "Backlog", value: "backlog" },
-  { label: "Pendiente", value: "todo" },
-  { label: "En curso", value: "in_progress" },
-  { label: "Completado", value: "done" },
+  { label: "To do", value: "todo" },
+  { label: "In progress", value: "in_progress" },
+  { label: "Done", value: "done" },
 ];
 
 export function TaskCard({ task, onOpenEditor, onDeleteTask, onUpdateStatus, onToggleChecklistItem }: TaskCardProps) {
@@ -44,7 +44,7 @@ export function TaskCard({ task, onOpenEditor, onDeleteTask, onUpdateStatus, onT
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <Badge variant={PRIORITY_VARIANTS[task.priority]} size="sm" className="opacity-90">
-          {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Media" : "Baja"}
+          {task.priority === "high" ? "High" : task.priority === "medium" ? "Medium" : "Low"}
         </Badge>
         
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -101,7 +101,7 @@ export function TaskCard({ task, onOpenEditor, onDeleteTask, onUpdateStatus, onT
               </button>
             ))}
             {task.checklist.length > 3 && (
-              <p className="text-[10px] font-medium text-zinc-400">+{task.checklist.length - 3} subtareas más</p>
+              <p className="text-[10px] font-medium text-zinc-400">+{task.checklist.length - 3} more subtasks</p>
             )}
           </div>
         </div>
@@ -112,7 +112,7 @@ export function TaskCard({ task, onOpenEditor, onDeleteTask, onUpdateStatus, onT
           {task.due_date && (
             <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${isPastDue ? 'text-red-500' : 'text-zinc-400'}`}>
               <Calendar className="h-3 w-3" />
-              <span>{new Date(task.due_date).toLocaleDateString("es-ES", { day: 'numeric', month: 'short' })}</span>
+              <span>{new Date(task.due_date).toLocaleDateString("en-US", { day: 'numeric', month: 'short' })}</span>
             </div>
           )}
         </div>

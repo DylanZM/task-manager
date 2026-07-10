@@ -62,7 +62,7 @@ export function TaskEditorModal({
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-950 text-white">
               <Pencil className="h-4 w-4" />
             </div>
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-950">Editar Tarea</h3>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-950">Edit Task</h3>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-zinc-400 hover:text-zinc-950">
             <X className="h-4 w-4" />
@@ -71,7 +71,7 @@ export function TaskEditorModal({
 
         <form onSubmit={onSaveEditor} className="space-y-6 p-6">
           <Input
-            label="Título"
+            label="Title"
             required
             value={editingTitle}
             onChange={(event) => setEditingTitle(event.target.value)}
@@ -80,7 +80,7 @@ export function TaskEditorModal({
 
           <div className="group relative">
             <Textarea
-              label="Descripción"
+              label="Description"
               value={editingDescription}
               onChange={(event) => setEditingDescription(event.target.value)}
               className="min-h-[140px] pb-12"
@@ -94,12 +94,12 @@ export function TaskEditorModal({
               className="absolute right-2 bottom-2 h-9 px-3"
               leftIcon={Sparkles}
             >
-              {isGeneratingEditingDescription ? "Actualizando..." : "Mejorar con IA"}
+              {isGeneratingEditingDescription ? "Updating..." : "Enhance with AI"}
             </Button>
           </div>
 
           <div className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-3">
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Checklist / Subtareas</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Checklist / Subtasks</p>
             <div className="space-y-2">
               {editingChecklist.map((item) => (
                 <div key={item.id} className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export function TaskEditorModal({
             </div>
             <div className="mt-3 flex gap-2">
               <Input
-                placeholder="Nueva subtarea..."
+                placeholder="New subtask..."
                 value={newChecklistText}
                 onChange={(event) => setNewChecklistText(event.target.value)}
                 className="h-9 text-sm"
@@ -143,37 +143,37 @@ export function TaskEditorModal({
                 }}
                 leftIcon={Plus}
               >
-                Añadir
+                Add
               </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="Estado"
+              label="Status"
               value={editingStatus}
               onChange={(event) => setEditingStatus(event.target.value as TaskStatus)}
               options={[
                 { label: "Backlog", value: "backlog" },
-                { label: "Por hacer", value: "todo" },
-                { label: "En progreso", value: "in_progress" },
-                { label: "Completado", value: "done" },
+                { label: "To do", value: "todo" },
+                { label: "In progress", value: "in_progress" },
+                { label: "Done", value: "done" },
               ]}
             />
             <Select
-              label="Prioridad"
+              label="Priority"
               value={editingPriority}
               onChange={(event) => setEditingPriority(event.target.value as TaskPriority)}
               options={[
-                { label: "Baja", value: "low" },
-                { label: "Media", value: "medium" },
-                { label: "Alta", value: "high" },
+                { label: "Low", value: "low" },
+                { label: "Medium", value: "medium" },
+                { label: "High", value: "high" },
               ]}
             />
           </div>
 
           <Input
-            label="Fecha de vencimiento"
+            label="Due date"
             type="date"
             value={editingDueDate}
             onChange={(event) => setEditingDueDate(event.target.value)}
@@ -181,10 +181,10 @@ export function TaskEditorModal({
 
           <div className="flex gap-3 border-t border-zinc-100 pt-4">
             <Button type="submit" className="flex-1 shadow-lg shadow-zinc-200/50">
-              Guardar Cambios
+              Save Changes
             </Button>
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Cancelar
+              Cancel
             </Button>
           </div>
         </form>

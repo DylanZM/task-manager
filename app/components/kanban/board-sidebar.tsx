@@ -40,7 +40,7 @@ export function BoardSidebar({
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Workspace</p>
-            <h1 className="text-sm font-bold text-zinc-950">Mis Proyectos</h1>
+            <h1 className="text-sm font-bold text-zinc-950">My Projects</h1>
           </div>
         </div>
         <Button 
@@ -48,7 +48,7 @@ export function BoardSidebar({
           size="icon" 
           onClick={onSignOut} 
           className="h-9 w-9 bg-zinc-50 border border-zinc-100 text-zinc-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100"
-          title="Cerrar sesión"
+          title="Sign out"
         >
           <LogOut className="h-4 w-4" />
         </Button>
@@ -60,7 +60,7 @@ export function BoardSidebar({
             <Input
               value={newBoardName}
               onChange={(event) => setNewBoardName(event.target.value)}
-              placeholder="Nombre del proyecto..."
+              placeholder="Project name..."
               className="pr-12 h-10 bg-zinc-50/50 border-zinc-200/50 focus:bg-white"
             />
             <Button
@@ -77,7 +77,7 @@ export function BoardSidebar({
       </div>
 
       <nav className="space-y-1">
-        <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Tableros Activos</p>
+        <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Active Boards</p>
         <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
           {boards.length > 0 ? (
             boards.map((board) => {
@@ -114,7 +114,7 @@ export function BoardSidebar({
           ) : (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 p-6 text-center">
               <Folder className="mb-2 h-6 w-6 text-zinc-300" />
-              <p className="text-xs text-zinc-500">No hay tableros aún.</p>
+              <p className="text-xs text-zinc-500">No boards yet.</p>
             </div>
           )}
         </div>

@@ -107,9 +107,9 @@ export function AuthScreen({
           <h1 className="text-3xl font-bold tracking-tight text-zinc-950">
             Kanban Flow
           </h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            Simplifica tu flujo de trabajo con Inteligencia Artificial.
-          </p>
+            <p className="mt-2 text-sm text-zinc-600">
+              Simplify your workflow with Artificial Intelligence.
+            </p>
         </div>
 
         <Card
@@ -119,17 +119,17 @@ export function AuthScreen({
           <div className="mb-8 text-center">
             <h2 className="text-2xl font-black text-zinc-950">
               {needsVerificationCode
-                ? "Verifica tu correo"
+                ? "Verify your email"
                 : authMode === "login"
-                  ? "Bienvenido de nuevo"
-                  : "Crea tu cuenta"}
+                  ? "Welcome back"
+                  : "Create your account"}
             </h2>
             <p className="mt-2 text-sm font-medium text-zinc-500">
               {needsVerificationCode
-                ? "Hemos enviado un código a tu email"
+                ? "We've sent a code to your email"
                 : authMode === "login"
-                  ? "Ingresa tus credenciales para continuar"
-                  : "Únete a la plataforma de gestión más avanzada"}
+                  ? "Enter your credentials to continue"
+                  : "Join the most advanced management platform"}
             </p>
           </div>
 
@@ -155,7 +155,7 @@ export function AuthScreen({
           {needsVerificationCode ? (
             <form className="space-y-4" onSubmit={onVerifyCode}>
               <Input
-                label="Código de verificación"
+                label="Verification code"
                 required
                 value={verificationCode}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -170,7 +170,7 @@ export function AuthScreen({
                 isLoading={isSubmittingAuth}
                 className="w-full"
               >
-                Verificar cuenta
+                Verify account
               </Button>
             </form>
           ) : (
@@ -181,7 +181,7 @@ export function AuthScreen({
               >
                 {authMode === "register" && (
                   <Input
-                    label="Nombre completo"
+                    label="Full name"
                     value={displayName}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setDisplayName(e.target.value)
@@ -192,7 +192,7 @@ export function AuthScreen({
                   />
                 )}
                 <Input
-                  label="Correo electrónico"
+                  label="Email"
                   required
                   type="email"
                   autoComplete="email"
@@ -200,11 +200,11 @@ export function AuthScreen({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setEmail(e.target.value)
                   }
-                  placeholder="nombre@ejemplo.com"
+                  placeholder="name@example.com"
                   className="shadow-none focus:ring-0"
                 />
                 <Input
-                  label="Contraseña"
+                  label="Password"
                   required
                   type="password"
                   minLength={minPasswordLength}
@@ -224,7 +224,7 @@ export function AuthScreen({
                   isLoading={isSubmittingAuth}
                   className="w-full"
                 >
-                  {authMode === "login" ? "Iniciar sesión" : "Crear cuenta"}
+                  {authMode === "login" ? "Sign in" : "Create account"}
                 </Button>
               </form>
 
@@ -236,7 +236,7 @@ export function AuthScreen({
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                       <span className="bg-white px-2 text-zinc-500 font-medium">
-                        O continúa con
+                        Or continue with
                       </span>
                     </div>
                   </div>
@@ -274,13 +274,20 @@ export function AuthScreen({
             </>
           )}
 
-          <div className="mt-8 text-center">
-            <Link
-              href={authMode === "login" ? "/register" : "/login"}
-              className="text-sm font-medium text-zinc-600 transition-colors"
-            >
-              {authMode === "login" ? "Regístrate" : "Iniciar sesión"}
-            </Link>
+          <div className="mt-8 text-center text-sm font-medium text-zinc-600">
+            {authMode === "login" ? (
+              <>Don&apos;t have an account?{" "}
+                <Link href="/register" className="transition-colors hover:text-zinc-950">
+                  Register
+                </Link>
+              </>
+            ) : (
+              <>Already have an account?{" "}
+                <Link href="/login" className="transition-colors hover:text-zinc-950">
+                  Sign in
+                </Link>
+              </>
+            )}
           </div>
         </Card>
 

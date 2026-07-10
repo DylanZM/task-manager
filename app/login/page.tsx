@@ -43,7 +43,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950" />
           <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium shadow-sm">
-            Cargando acceso...
+            Loading login...
           </p>
         </div>
       </main>

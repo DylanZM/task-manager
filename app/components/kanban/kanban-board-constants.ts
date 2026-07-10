@@ -13,15 +13,15 @@ export type AppNotification = {
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   backlog: "Backlog",
-  todo: "Por hacer",
-  in_progress: "En progreso",
-  done: "Completado",
+  todo: "To do",
+  in_progress: "In progress",
+  done: "Done",
 };
 
 export const PRIORITY_LABELS: Record<TaskPriority, string> = {
-  low: "Baja",
-  medium: "Media",
-  high: "Alta",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
 };
 
 export const STATUS_OPTIONS: TaskStatus[] = ["backlog", "todo", "in_progress", "done"];

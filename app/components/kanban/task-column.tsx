@@ -28,17 +28,17 @@ const COLUMN_CONFIG: Record<TaskStatus, { label: string; icon: LucideIcon; color
     color: "text-zinc-500",
   },
   todo: {
-    label: "Por hacer",
+    label: "To do",
     icon: Circle,
     color: "text-blue-500",
   },
   in_progress: {
-    label: "En progreso",
+    label: "In progress",
     icon: Clock,
     color: "text-amber-500",
   },
   done: {
-    label: "Completado",
+    label: "Done",
     icon: CheckCircle2,
     color: "text-emerald-500",
   },
@@ -151,14 +151,14 @@ export function TaskColumn({
             <form onSubmit={handleQuickAdd} className="space-y-3">
               <Input
                 autoFocus
-                placeholder="Título de la tarea..."
+                placeholder="Task title..."
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 className="h-9 text-sm bg-white font-bold"
               />
               <div className="relative group">
                 <Textarea
-                  placeholder="Descripción (opcional)..."
+                  placeholder="Description (optional)..."
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   className="text-xs bg-white min-h-[80px] pr-10 resize-none"
@@ -175,7 +175,7 @@ export function TaskColumn({
                 </Button>
               </div>
               <div className="flex items-center gap-2">
-                <Button type="submit" size="sm" className="flex-1 h-8 text-[11px] font-bold">Añadir Tarea</Button>
+                <Button type="submit" size="sm" className="flex-1 h-8 text-[11px] font-bold">Add Task</Button>
                 <Button 
                   type="button" 
                   variant="ghost" 
@@ -206,7 +206,7 @@ export function TaskColumn({
             <div className="mb-3 rounded-full bg-white p-3 shadow-sm border border-zinc-100">
               <Icon className="h-6 w-6 text-zinc-300" />
             </div>
-            <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Sin tareas</p>
+            <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">No tasks</p>
             <Button
               variant="outline"
               size="sm"
@@ -214,7 +214,7 @@ export function TaskColumn({
               className="mt-4 border-zinc-300 text-zinc-500 hover:text-zinc-950"
               leftIcon={Plus}
             >
-              Añadir tarea
+              Add task
             </Button>
           </div>
         )}
