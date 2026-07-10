@@ -35,29 +35,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Requires Node.js 20+ and an InsForge project with auth and database enabled. See [`README.private.md`](README.private.md) for full setup instructions.
 
-## Project Structure
 
-```
-app/
-  components/kanban/   # Board, columns, cards
-  hooks/               # Kanban, auth, realtime
-  login/               # Sign-in page
-  register/            # Sign-up page
-  profile/             # User profile
-insforge/
-  schema.sql           # Database schema and RLS policies
-lib/
-  insforge/            # Backend client and helpers
-```
-
-## Scripts
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start development server |
-| `npm run build` | Create production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
 
 ## Security
 
