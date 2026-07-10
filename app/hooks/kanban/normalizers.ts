@@ -1,5 +1,5 @@
 import { AuthConfig, Board, Task, TaskChecklistItem } from "@/lib/task-types";
-import { AuthUser } from "@/app/hooks/kanban/types";
+import { AuthUser, UserProfile } from "@/app/hooks/kanban/types";
 
 export const DEFAULT_AUTH_CONFIG: AuthConfig = {
   requireEmailVerification: false,
@@ -17,12 +17,21 @@ const toIdString = (value: unknown): string | null => {
 
 export const toSafeUser = (value: unknown): AuthUser | null => {
   if (!value || typeof value !== "object") return null;
-  const candidate = value as { id?: unknown; email?: unknown; name?: unknown };
+  const candidate = value as {
+    id?: unknown;
+    email?: unknown;
+    name?: unknown;
+    profile?: { name?: string; avatar_url?: string } | null;
+  };
   if (typeof candidate.id !== "string" || typeof candidate.email !== "string") return null;
+  const profile = candidate.profile;
+  const profileName = profile && typeof profile === "object" ? profile.name : undefined;
+  const profileAvatar = profile && typeof profile === "object" ? profile.avatar_url : undefined;
   return {
     id: candidate.id,
     email: candidate.email,
-    name: typeof candidate.name === "string" ? candidate.name : null,
+    name: typeof candidate.name === "string" ? candidate.name : profileName ?? null,
+    avatar_url: typeof profileAvatar === "string" ? profileAvatar : null,
   };
 };
 
@@ -107,6 +116,17 @@ export const toSafeTasks = (value: unknown): Task[] => {
     });
     return acc;
   }, []);
+};
+
+export const toSafeProfile = (value: unknown): UserProfile | null => {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<UserProfile>;
+  if (typeof candidate.user_id !== "string") return null;
+  return {
+    user_id: candidate.user_id,
+    display_name: typeof candidate.display_name === "string" ? candidate.display_name : null,
+    avatar_url: typeof candidate.avatar_url === "string" ? candidate.avatar_url : null,
+  };
 };
 
 export const toDateInputValue = (isoDate: string | null) => (isoDate ? isoDate.slice(0, 10) : "");

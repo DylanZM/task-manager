@@ -6,6 +6,13 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string | null;
+  avatar_url?: string | null;
+}
+
+export interface UserProfile {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
 }
 
 export interface QuickTaskInput {

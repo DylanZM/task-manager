@@ -3,8 +3,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { getInsforgeClient } from "@/lib/insforge/client";
 import { AuthConfig, Board, Task, TaskChecklistItem, TaskPriority, TaskStatus } from "@/lib/task-types";
-import { DEFAULT_AUTH_CONFIG, toDateInputValue, toSafeBoards, toSafeTasks, toSafeUser } from "@/app/hooks/kanban/normalizers";
-import { AuthUser, QuickTaskInput } from "@/app/hooks/kanban/types";
+import { DEFAULT_AUTH_CONFIG, toDateInputValue, toSafeBoards, toSafeProfile, toSafeTasks, toSafeUser } from "@/app/hooks/kanban/normalizers";
+import { AuthUser, QuickTaskInput, UserProfile } from "@/app/hooks/kanban/types";
 import {
   buildFallbackDescription,
   buildTaskDescriptionMessages,
@@ -46,6 +46,9 @@ export function useKanbanLogic() {
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreatingBoard, setIsCreatingBoard] = useState(false);
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -153,22 +156,88 @@ export function useKanbanLogic() {
     [],
   );
 
-  const ensureProfile = useCallback(async (client: ReturnType<typeof getInsforgeClient>, currentUser: AuthUser) => {
+  const syncProfile = useCallback(async (client: ReturnType<typeof getInsforgeClient>, currentUser: AuthUser) => {
     const { data, error } = await client.database
       .from("profiles")
-      .select("user_id")
+      .select("user_id, avatar_url")
       .eq("user_id", currentUser.id)
       .limit(1);
     if (error) {
       setTaskError(error.message);
       return;
     }
-    if (Array.isArray(data) && data.length > 0) return;
+    if (Array.isArray(data) && data.length > 0) {
+      const existing = data[0] as { user_id: string; avatar_url?: string | null };
+      const needsUpdate =
+        currentUser.name != null ||
+        (currentUser.avatar_url != null && !existing.avatar_url);
+      if (!needsUpdate) return;
+      const update: Record<string, unknown> = {};
+      if (currentUser.name != null) update.display_name = currentUser.name;
+      if (currentUser.avatar_url != null && !existing.avatar_url) {
+        update.avatar_url = currentUser.avatar_url;
+      }
+      const { error: updateError } = await client.database
+        .from("profiles")
+        .update(update)
+        .eq("user_id", currentUser.id);
+      if (updateError) setTaskError(updateError.message);
+      return;
+    }
     const { error: insertError } = await client.database.from("profiles").insert([
-      { user_id: currentUser.id, display_name: currentUser.name ?? null, avatar_url: null },
+      { user_id: currentUser.id, display_name: currentUser.name ?? null, avatar_url: currentUser.avatar_url ?? null },
     ]);
     if (insertError) setTaskError(insertError.message);
   }, []);
+
+  const loadProfile = useCallback(async (client: ReturnType<typeof getInsforgeClient>, userId: string) => {
+    const { data, error } = await client.database
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .limit(1);
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    const profileData = Array.isArray(data) ? data[0] : null;
+    setProfile(toSafeProfile(profileData));
+  }, []);
+
+  async function handleUpdateProfile(updates: { display_name?: string | null }, avatarFile?: File | null) {
+    if (!insforge || !user) return;
+    setIsUpdatingProfile(true);
+    setTaskError("");
+    const dbUpdate: Record<string, unknown> = {};
+    if (updates.display_name !== undefined) dbUpdate.display_name = updates.display_name?.trim() || null;
+
+    if (avatarFile) {
+      const ext = avatarFile.name.split(".").pop() || "jpg";
+      const filePath = `${user.id}/avatar.${ext}`;
+      const { data: uploadData, error: uploadError } = await insforge.storage
+        .from("avatars")
+        .upload(filePath, avatarFile);
+      if (uploadError || !uploadData) {
+        setTaskError(uploadError?.message || "Failed to upload avatar.");
+        setIsUpdatingProfile(false);
+        return;
+      }
+      dbUpdate.avatar_url = uploadData.url;
+    }
+
+    const { data, error } = await insforge.database
+      .from("profiles")
+      .update(dbUpdate)
+      .eq("user_id", user.id)
+      .select();
+    setIsUpdatingProfile(false);
+    if (error) {
+      setTaskError(error.message);
+      return;
+    }
+    const updated = toSafeProfile(Array.isArray(data) ? data[0] : null);
+    if (updated) setProfile(updated);
+  }
 
   const resolveAiModel = useCallback(
     async (_client: ReturnType<typeof getInsforgeClient>) => {
@@ -204,12 +273,13 @@ export function useKanbanLogic() {
       await fetchAuthConfig();
       const currentUser = await loadCurrentUser(insforge);
       if (currentUser) {
-        await ensureProfile(insforge, currentUser);
+        await syncProfile(insforge, currentUser);
+        await loadProfile(insforge, currentUser.id);
         await loadBoardsAndTasks(insforge, currentUser);
       }
       setIsLoadingAuth(false);
     })();
-  }, [ensureProfile, fetchAuthConfig, insforge, loadBoardsAndTasks, loadCurrentUser]);
+  }, [syncProfile, fetchAuthConfig, insforge, loadBoardsAndTasks, loadCurrentUser, loadProfile]);
 
   useBoardRealtimeSync({ insforge, user, selectedBoardId, loadTasks, setTaskError });
 
@@ -240,7 +310,8 @@ export function useKanbanLogic() {
     const signedUpUser = toSafeUser(data?.user);
     setUser(signedUpUser);
     if (signedUpUser) {
-      await ensureProfile(insforge, signedUpUser);
+      await syncProfile(insforge, signedUpUser);
+      await loadProfile(insforge, signedUpUser.id);
       await loadBoardsAndTasks(insforge, signedUpUser);
     }
   }
@@ -262,7 +333,8 @@ export function useKanbanLogic() {
     const verifiedUser = toSafeUser(data?.user);
     setUser(verifiedUser);
     if (verifiedUser) {
-      await ensureProfile(insforge, verifiedUser);
+      await syncProfile(insforge, verifiedUser);
+      await loadProfile(insforge, verifiedUser.id);
       await loadBoardsAndTasks(insforge, verifiedUser);
     }
     setVerificationCode("");
@@ -284,7 +356,8 @@ export function useKanbanLogic() {
     const signedInUser = toSafeUser(data?.user);
     setUser(signedInUser);
     if (signedInUser) {
-      await ensureProfile(insforge, signedInUser);
+      await syncProfile(insforge, signedInUser);
+      await loadProfile(insforge, signedInUser.id);
       await loadBoardsAndTasks(insforge, signedInUser);
     }
   }
@@ -312,6 +385,7 @@ export function useKanbanLogic() {
       return;
     }
     setUser(null);
+    setProfile(null);
     setBoards([]);
     setSelectedBoardId(null);
     setTasks([]);
@@ -624,6 +698,10 @@ export function useKanbanLogic() {
     verificationMethod,
     user,
 
+    // Profile State
+    profile,
+    isUpdatingProfile,
+
     // Board State
     boards,
     selectedBoard,
@@ -673,6 +751,7 @@ export function useKanbanLogic() {
     handleLogin,
     handleOAuthSignIn,
     handleSignOut,
+    handleUpdateProfile,
     handleCreateBoard,
     switchBoard,
     handleDeleteBoard,

@@ -11,6 +11,7 @@ export default function Home() {
   const {
     isLoadingAuth,
     user,
+    profile,
 
     // Board State
     boards,
@@ -89,6 +90,8 @@ export default function Home() {
             setNewBoardName={setNewBoardName}
             isCreatingBoard={isCreatingBoard}
             taskError={taskError}
+            user={user}
+            profileAvatarUrl={profile?.avatar_url ?? null}
             onCreateBoard={handleCreateBoard}
             onSwitchBoard={(boardId) => void switchBoard(boardId)}
             onDeleteBoard={(boardId) => void handleDeleteBoard(boardId)}

@@ -426,3 +426,5 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE tasks TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE profiles TO authenticated;
 GRANT SELECT ON TABLE realtime.channels TO authenticated;
 GRANT SELECT ON TABLE realtime.messages TO authenticated;
+
+

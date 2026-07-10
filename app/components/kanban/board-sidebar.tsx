@@ -1,7 +1,9 @@
 "use client";
 
 import { Folder, LayoutDashboard, LogOut, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Board } from "@/lib/task-types";
+import { AuthUser } from "@/app/hooks/kanban/types";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/form";
 import { Card, Badge } from "@/app/components/ui/card-badge";
@@ -13,6 +15,8 @@ type Props = {
   setNewBoardName: (value: string) => void;
   isCreatingBoard: boolean;
   taskError: string;
+  user: AuthUser | null;
+  profileAvatarUrl: string | null;
   onCreateBoard: (event: React.FormEvent<HTMLFormElement>) => void;
   onSwitchBoard: (boardId: string) => void;
   onDeleteBoard: (boardId: string) => void;
@@ -26,11 +30,23 @@ export function BoardSidebar({
   setNewBoardName,
   isCreatingBoard,
   taskError,
+  user,
+  profileAvatarUrl,
   onCreateBoard,
   onSwitchBoard,
   onDeleteBoard,
   onSignOut,
 }: Props) {
+  const router = useRouter();
+  const avatarUrl = profileAvatarUrl || user?.avatar_url || null;
+  const initials = (user?.name || user?.email || "")
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
     <Card className="flex flex-col h-fit border-zinc-200/60 shadow-lg shadow-zinc-200/40 p-5 overflow-hidden">
       <div className="mb-6 flex items-center justify-between">
@@ -43,15 +59,31 @@ export function BoardSidebar({
             <h1 className="text-sm font-bold text-zinc-950">My Projects</h1>
           </div>
         </div>
-        <Button 
-          variant="secondary" 
-          size="icon" 
-          onClick={onSignOut} 
-          className="h-9 w-9 bg-zinc-50 border border-zinc-100 text-zinc-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100"
-          title="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => router.push("/profile")}
+            className="h-9 w-9 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-400 hover:border-zinc-300 hover:text-zinc-950"
+            title="Profile"
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-[10px] font-bold">
+                {initials}
+              </span>
+            )}
+          </button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onSignOut} 
+            className="h-9 w-9 text-zinc-400 hover:text-red-600 hover:bg-red-50"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6">
