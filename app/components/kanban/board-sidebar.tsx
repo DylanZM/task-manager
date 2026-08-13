@@ -3,6 +3,8 @@
 import { Folder, LayoutDashboard, LogOut, Moon, Plus, Sun, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PullCord } from "pullcord";
+import "pullcord/pullcord.css";
 import { Board } from "@/lib/task-types";
 import { AuthUser } from "@/app/hooks/kanban/types";
 import { Button } from "@/app/components/ui/button";
@@ -74,7 +76,7 @@ export function BoardSidebar({
           <button
             type="button"
             onClick={toggleTheme}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-400 hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:text-zinc-100"
+            className="flex h-9 w-9 xl:hidden items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-400 hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:text-zinc-100"
             title={theme === "dark" ? "Light mode" : "Dark mode"}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
@@ -189,6 +191,13 @@ export function BoardSidebar({
         confirmLabel="Delete"
         onConfirm={confirmDeleteBoard}
         onCancel={() => setPendingDeleteBoard(null)}
+      />
+
+      <PullCord
+        onPull={toggleTheme}
+        pulled={theme === "dark"}
+        ariaLabel="Toggle light and dark theme"
+        className="hidden xl:block"
       />
     </Card>
   );

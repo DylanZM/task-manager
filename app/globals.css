@@ -38,6 +38,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* PullCord theme toggle placement + rope colour */
+  --pullcord-top: 4px;
+  --pullcord-right: calc(100% - 368px);
+  --pullcord-z: 40;
+  --pullcord-ink: rgba(113, 113, 122, 0.6);
 }
 
 @theme inline {
@@ -167,6 +173,9 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* PullCord theme toggle rope colour in dark theme */
+  --pullcord-ink: rgba(161, 161, 170, 0.72);
 }
 
 @layer base {

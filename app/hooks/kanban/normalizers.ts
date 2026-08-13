@@ -22,16 +22,30 @@ export const toSafeUser = (value: unknown): AuthUser | null => {
     email?: unknown;
     name?: unknown;
     profile?: { name?: string; avatar_url?: string } | null;
+    metadata?: Record<string, unknown> | null;
   };
   if (typeof candidate.id !== "string" || typeof candidate.email !== "string") return null;
   const profile = candidate.profile;
   const profileName = profile && typeof profile === "object" ? profile.name : undefined;
   const profileAvatar = profile && typeof profile === "object" ? profile.avatar_url : undefined;
+  const metadata = candidate.metadata;
+  const metadataName = metadata && typeof metadata.name === "string" ? metadata.name : undefined;
+  const metadataPicture =
+    metadata && typeof metadata.picture === "string" ? metadata.picture : undefined;
+  const metadataAvatar =
+    metadata && typeof metadata.avatar_url === "string" ? metadata.avatar_url : undefined;
   return {
     id: candidate.id,
     email: candidate.email,
-    name: typeof candidate.name === "string" ? candidate.name : profileName ?? null,
-    avatar_url: typeof profileAvatar === "string" ? profileAvatar : null,
+    name:
+      typeof candidate.name === "string"
+        ? candidate.name
+        : profileName ?? metadataName ?? null,
+    avatar_url:
+      (typeof profileAvatar === "string" && profileAvatar) ||
+      (typeof metadataPicture === "string" && metadataPicture) ||
+      (typeof metadataAvatar === "string" && metadataAvatar) ||
+      null,
   };
 };
 
