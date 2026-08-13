@@ -21,12 +21,14 @@ It includes authentication, multi-board organization, task CRUD, drag-and-drop s
 ## Features
 
 - Email/password authentication with verification-aware flow (`code` or `link`)
-- OAuth login support (GitHub and Google)
+- OAuth login with Google
 - Multi-board Kanban workflow (create, switch, and delete boards)
 - Task management with title, description, status, priority, and due date
 - Drag-and-drop movement across Kanban columns
 - AI-generated task descriptions from task title
 - Real-time updates per board across active clients
+- Dark mode with system preference and manual toggle
+- Deletion protection: confirmation dialogs and undo toasts for boards and tasks
 - Per-user data isolation with PostgreSQL Row-Level Security (RLS)
 
 ## Tech Stack

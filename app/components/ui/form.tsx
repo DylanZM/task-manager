@@ -9,12 +9,12 @@ export function Input({ label, error, className = "", ...props }: InputProps) {
   return (
     <div className="w-full space-y-1.5">
       {label && (
-        <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           {label}
         </label>
       ) }
       <input
-        className={`h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-950 transition-all duration-200 placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100 outline-none disabled:bg-zinc-50 disabled:text-zinc-500 ${
+        className={`h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-950 transition-all duration-200 placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100 outline-none disabled:bg-zinc-50 disabled:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-400 dark:focus:ring-zinc-900 dark:disabled:bg-zinc-900 dark:disabled:text-zinc-500 ${
           error ? "border-red-500 ring-red-50" : ""
         } ${className}`}
         {...props}
@@ -33,12 +33,12 @@ export function Textarea({ label, error, className = "", ...props }: TextareaPro
   return (
     <div className="w-full space-y-1.5">
       {label && (
-        <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           {label}
         </label>
       )}
       <textarea
-        className={`w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-950 transition-all duration-200 placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100 outline-none min-h-[100px] resize-none disabled:bg-zinc-50 disabled:text-zinc-500 ${
+        className={`w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-950 transition-all duration-200 placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100 outline-none min-h-[100px] resize-none disabled:bg-zinc-50 disabled:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-400 dark:focus:ring-zinc-900 dark:disabled:bg-zinc-900 dark:disabled:text-zinc-500 ${
           error ? "border-red-500 ring-red-50" : ""
         } ${className}`}
         {...props}
@@ -58,13 +58,13 @@ export function Select({ label, error, options, className = "", ...props }: Sele
   return (
     <div className="w-full space-y-1.5">
       {label && (
-        <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           {label}
         </label>
       )}
       <div className="relative">
         <select
-          className={`h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-white px-3 pr-10 text-sm text-zinc-950 transition-all duration-200 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100 outline-none disabled:bg-zinc-50 disabled:text-zinc-500 ${
+          className={`h-11 w-full appearance-none rounded-xl border border-zinc-200 bg-white px-3 pr-10 text-sm text-zinc-950 transition-all duration-200 focus:border-zinc-950 focus:ring-4 focus:ring-zinc-100 outline-none disabled:bg-zinc-50 disabled:text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-400 dark:focus:ring-zinc-900 dark:disabled:bg-zinc-900 dark:disabled:text-zinc-500 ${
             error ? "border-red-500 ring-red-50" : ""
           } ${className}`}
           {...props}

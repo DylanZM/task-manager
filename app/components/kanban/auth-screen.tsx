@@ -83,33 +83,33 @@ export function AuthScreen({
   const isAnyOAuthLoading = Boolean(oauthLoadingProvider);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white p-6 selection:bg-zinc-950 selection:text-white">
+    <main className="flex min-h-screen items-center justify-center bg-white p-6 selection:bg-zinc-950 selection:text-white dark:bg-zinc-950 dark:selection:bg-white dark:selection:text-zinc-950">
       <div className="w-full max-w-105">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-950 text-white shadow-xl shadow-zinc-200">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-950 text-white shadow-xl shadow-zinc-200 dark:bg-white dark:text-zinc-950 dark:shadow-none">
             <Layout className="h-7 w-7" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-950">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-950 dark:text-zinc-100">
             Kanban Flow
           </h1>
-            <p className="mt-2 text-sm text-zinc-600">
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               Simplify your workflow with Artificial Intelligence.
             </p>
         </div>
 
         <Card
           glass
-          className="overflow-hidden border-zinc-200/60 bg-white p-8 shadow-xl shadow-zinc-200/50"
+          className="overflow-hidden border-zinc-200/60 bg-white p-8 shadow-xl shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none"
         >
           <div className="mb-8 text-center">
-            <h2 className="text-2xl font-black text-zinc-950">
+            <h2 className="text-2xl font-black text-zinc-950 dark:text-zinc-100">
               {needsVerificationCode
                 ? "Verify your email"
                 : authMode === "login"
                   ? "Welcome back"
                   : "Create your account"}
             </h2>
-            <p className="mt-2 text-sm font-medium text-zinc-500">
+            <p className="mt-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
               {needsVerificationCode
                 ? "We've sent a code to your email"
                 : authMode === "login"
@@ -131,7 +131,7 @@ export function AuthScreen({
 
           {authError && (
             <div className="mb-4">
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-600">
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
                 {authError}
               </div>
             </div>
@@ -217,10 +217,10 @@ export function AuthScreen({
                 <div className="mt-6 space-y-3">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-zinc-200" />
+                      <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-zinc-500 font-medium">
+                      <span className="bg-white px-2 text-zinc-500 font-medium dark:bg-zinc-900 dark:text-zinc-400">
                         Or continue with
                       </span>
                     </div>
@@ -246,16 +246,16 @@ export function AuthScreen({
             </>
           )}
 
-          <div className="mt-8 text-center text-sm font-medium text-zinc-600">
+          <div className="mt-8 text-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
             {authMode === "login" ? (
               <>Don&apos;t have an account?{" "}
-                <Link href="/register" className="transition-colors hover:text-zinc-950">
+                <Link href="/register" className="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">
                   Register
                 </Link>
               </>
             ) : (
               <>Already have an account?{" "}
-                <Link href="/login" className="transition-colors hover:text-zinc-950">
+                <Link href="/login" className="transition-colors hover:text-zinc-950 dark:hover:text-zinc-100">
                   Sign in
                 </Link>
               </>
@@ -263,8 +263,8 @@ export function AuthScreen({
           </div>
         </Card>
 
-        <footer className="mt-8 flex items-center justify-center gap-4 text-zinc-400">
-          <div className="h-1 w-1 rounded-full bg-zinc-300" />
+        <footer className="mt-8 flex items-center justify-center gap-4 text-zinc-400 dark:text-zinc-500">
+          <div className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
         </footer>
       </div>
     </main>

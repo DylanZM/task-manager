@@ -45,12 +45,12 @@ export function KanbanBoardHeader({
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-2xl font-black tracking-tight text-zinc-950">{boardName}</h2>
+            <h2 className="text-2xl font-black tracking-tight text-zinc-950 dark:text-zinc-100">{boardName}</h2>
             <Badge variant="blue" size="md" className="font-black bg-blue-100/50 text-blue-700">
               Personal
             </Badge>
           </div>
-          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-zinc-400">{userEmail}'s workspace</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{userEmail}&apos;s workspace</p>
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto">
@@ -124,12 +124,12 @@ export function KanbanBoardHeader({
 
       {showNotifications && (
         <Card className="absolute right-0 top-full z-20 mt-2 w-full max-w-md p-3 shadow-2xl shadow-zinc-950/10 md:w-[430px]">
-          <div className="mb-3 border-b border-zinc-100 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Notifications</h3>
+          <div className="mb-3 border-b border-zinc-100 pb-2 dark:border-zinc-800">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Notifications</h3>
           </div>
           <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
             {notifications.length === 0 ? (
-              <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">
+              <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400">
                 No active notifications.
               </p>
             ) : (
@@ -138,10 +138,10 @@ export function KanbanBoardHeader({
                   key={notification.id}
                   className={`rounded-xl border p-2.5 text-xs ${
                     notification.kind === "success"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400"
                       : notification.kind === "warning"
-                        ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : "border-blue-200 bg-blue-50 text-blue-700"
+                        ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400"
+                        : "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400"
                   }`}
                 >
                   <p className="font-medium">{notification.message}</p>

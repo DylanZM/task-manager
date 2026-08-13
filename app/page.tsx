@@ -68,10 +68,10 @@ export default function Home() {
 
   if (isLoadingAuth || !user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-white text-zinc-900">
+      <main className="flex min-h-screen items-center justify-center bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950" />
-          <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium shadow-sm">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950 dark:border-zinc-700 dark:border-t-zinc-100" />
+          <p className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             Loading board...
           </p>
         </div>
@@ -80,7 +80,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-white text-zinc-950 selection:bg-zinc-950 selection:text-white">
+    <main className="min-h-screen bg-white text-zinc-950 selection:bg-zinc-950 selection:text-white dark:bg-zinc-950 dark:text-zinc-100 dark:selection:bg-white dark:selection:text-zinc-950">
       <div className="mx-auto w-full max-w-[1440px] grid grid-cols-1 gap-8 p-6 lg:grid-cols-[280px_1fr] lg:p-10 lg:gap-12">
         <div className="min-w-0">
           <BoardSidebar
@@ -124,7 +124,7 @@ export default function Home() {
             onSaveEditor={saveEditor}
             onCloseEditor={() => setEditingTaskId(null)}
             onGenerateEditingDescription={() => void generateTaskDescription("edit")}
-            onUpdateTaskStatus={(taskId, status) => void updateTask(taskId, { status })}
+            onUpdateTaskStatus={(taskId, status) => void updateTask(taskId, { status }, { silent: true })}
             onOpenEditor={openEditor}
             onDeleteTask={(taskId) => void handleDeleteTask(taskId)}
             onAiGenerate={handleAiGenerate}

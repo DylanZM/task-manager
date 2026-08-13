@@ -31,25 +31,25 @@ export function KanbanCalendarView({
     <div className="space-y-4 pb-6">
       {calendarGroups.length === 0 ? (
         <Card className="p-10 text-center">
-          <p className="text-sm text-zinc-500">No hay tareas con fecha para mostrar en calendario.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">No hay tareas con fecha para mostrar en calendario.</p>
         </Card>
       ) : (
         calendarGroups.map((group) => (
           <Card key={group.key} className="p-4">
             <div className="mb-3 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-zinc-500" />
-              <h3 className="text-sm font-bold capitalize text-zinc-950">{group.label}</h3>
+              <Calendar className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+              <h3 className="text-sm font-bold capitalize text-zinc-950 dark:text-zinc-100">{group.label}</h3>
               <Badge variant="zinc">{group.tasks.length}</Badge>
             </div>
             <div className="space-y-2">
               {group.tasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-3 md:flex-row md:items-center md:justify-between"
+                  className="flex flex-col gap-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-3 md:flex-row md:items-center md:justify-between dark:border-zinc-800 dark:bg-zinc-800/50"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-zinc-950">{task.title}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="truncate text-sm font-bold text-zinc-950 dark:text-zinc-100">{task.title}</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {STATUS_LABELS[task.status]} · Prioridad {PRIORITY_LABELS[task.priority]}
                     </p>
                   </div>
@@ -57,7 +57,7 @@ export function KanbanCalendarView({
                     <select
                       value={task.status}
                       onChange={(event) => onUpdateTaskStatus(task.id, event.target.value as TaskStatus)}
-                      className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs font-semibold text-zinc-700 outline-none"
+                      className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs font-semibold text-zinc-700 outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300"
                     >
                       {STATUS_OPTIONS.map((status) => (
                         <option key={status} value={status}>
@@ -73,7 +73,7 @@ export function KanbanCalendarView({
                       variant="ghost"
                       size="icon"
                       onClick={() => onDeleteTask(task.id)}
-                      className="h-8 w-8 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                      className="h-8 w-8 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:text-zinc-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -87,10 +87,10 @@ export function KanbanCalendarView({
 
       {noDueTasks.length > 0 && (
         <Card className="p-4">
-          <h3 className="mb-3 text-sm font-bold text-zinc-900">Sin fecha asignada</h3>
+          <h3 className="mb-3 text-sm font-bold text-zinc-900 dark:text-zinc-100">Sin fecha asignada</h3>
           <div className="space-y-2">
             {noDueTasks.map((task) => (
-              <div key={task.id} className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+              <div key={task.id} className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800/50 dark:text-zinc-400">
                 {task.title}
               </div>
             ))}

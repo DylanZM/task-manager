@@ -5,10 +5,10 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function Card({ children, glass = false, className = "", ...props }: CardProps) {
-  const baseStyles = "rounded-2xl border border-zinc-200 transition-all duration-300 shadow-sm";
-  const variants = glass 
-    ? "bg-white/60 backdrop-blur-xl border-white/40 shadow-xl shadow-zinc-200/50" 
-    : "bg-white hover:border-zinc-300 hover:shadow-md";
+  const baseStyles = "rounded-2xl border border-zinc-200 transition-all duration-300 shadow-sm dark:border-zinc-800";
+  const variants = glass
+    ? "bg-white/60 backdrop-blur-xl border-white/40 shadow-xl shadow-zinc-200/50 dark:bg-zinc-900/70 dark:border-zinc-700/40 dark:shadow-none"
+    : "bg-white hover:border-zinc-300 hover:shadow-md dark:bg-zinc-900 dark:hover:border-zinc-700";
 
   return (
     <div className={`${baseStyles} ${variants} ${className}`} {...props}>
@@ -22,21 +22,21 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   size?: "sm" | "md";
 }
 
-export function Badge({ 
-  children, 
-  variant = "zinc", 
+export function Badge({
+  children,
+  variant = "zinc",
   size = "sm",
-  className = "", 
-  ...props 
+  className = "",
+  ...props
 }: BadgeProps) {
   const baseStyles = "inline-flex items-center rounded-lg font-bold uppercase tracking-wider transition-colors";
-  
+
   const variants = {
-    zinc: "bg-zinc-100 text-zinc-600 border border-zinc-200",
-    amber: "bg-amber-50 text-amber-700 border border-amber-200",
-    red: "bg-red-50 text-red-700 border border-red-200",
-    green: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    blue: "bg-blue-50 text-blue-700 border border-blue-200",
+    zinc: "bg-zinc-100 text-zinc-600 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700",
+    amber: "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30",
+    red: "bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30",
+    green: "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30",
+    blue: "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30",
   };
 
   const sizes = {

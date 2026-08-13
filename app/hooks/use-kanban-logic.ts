@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "@/app/components/ui/toast";
 import { getInsforgeClient } from "@/lib/insforge/client";
 import { AuthConfig, Board, Task, TaskChecklistItem, TaskPriority, TaskStatus } from "@/lib/task-types";
 import { DEFAULT_AUTH_CONFIG, toDateInputValue, toSafeBoards, toSafeProfile, toSafeTasks, toSafeUser } from "@/app/hooks/kanban/normalizers";
@@ -219,11 +220,16 @@ export function useKanbanLogic() {
       const { data: uploadData, error: uploadError } = await insforge.storage
         .from("avatars")
         .upload(filePath, avatarFile);
-      if (uploadError || !uploadData) {
-        setTaskError(uploadError?.message || "Failed to upload avatar.");
-        setIsUpdatingProfile(false);
-        return;
-      }
+    if (uploadError || !uploadData) {
+      setTaskError(uploadError?.message || "Failed to upload avatar.");
+      setIsUpdatingProfile(false);
+      toast({
+        title: "Error al subir el avatar",
+        description: uploadError?.message || "No se pudo subir la imagen.",
+        variant: "error",
+      });
+      return;
+    }
       dbUpdate.avatar_url = uploadData.url;
     }
 
@@ -235,10 +241,12 @@ export function useKanbanLogic() {
     setIsUpdatingProfile(false);
     if (error) {
       setTaskError(error.message);
+      toast({ title: "Error al actualizar el perfil", description: error.message, variant: "error" });
       return;
     }
     const updated = toSafeProfile(Array.isArray(data) ? data[0] : null);
     if (updated) setProfile(updated);
+    toast({ title: "Perfil actualizado", variant: "success" });
   }
 
   const resolveAiModel = useCallback(
@@ -300,6 +308,7 @@ export function useKanbanLogic() {
     setIsSubmittingAuth(false);
     if (error) {
       setAuthError(error.message);
+      toast({ title: "Error al crear la cuenta", description: error.message, variant: "error" });
       return;
     }
     if (data?.requireEmailVerification) {
@@ -330,6 +339,7 @@ export function useKanbanLogic() {
     setIsSubmittingAuth(false);
     if (error) {
       setAuthError(error.message);
+      toast({ title: "Error al verificar el código", description: error.message, variant: "error" });
       return;
     }
     const verifiedUser = toSafeUser(data?.user);
@@ -353,6 +363,7 @@ export function useKanbanLogic() {
     setIsSubmittingAuth(false);
     if (error) {
       setAuthError(error.message);
+      toast({ title: "Error al iniciar sesión", description: error.message, variant: "error" });
       return;
     }
     const signedInUser = toSafeUser(data?.user);
@@ -376,6 +387,7 @@ export function useKanbanLogic() {
     if (error) {
       setAuthError(error.message);
       setOAuthLoadingProvider(null);
+      toast({ title: "Error al iniciar sesión con Google", description: error.message, variant: "error" });
     }
   }
 
@@ -415,6 +427,7 @@ export function useKanbanLogic() {
     setSelectedBoardId(created.id);
     setTasks([]);
     setNewBoardName("");
+    toast({ title: "Tablero creado", description: boardName, variant: "success" });
   }
 
   async function switchBoard(boardId: string) {
@@ -425,6 +438,13 @@ export function useKanbanLogic() {
 
   async function handleDeleteBoard(boardId: string) {
     if (!insforge || !user) return;
+    const boardToDelete = boards.find((board) => board.id === boardId);
+    const boardTasksQuery = await insforge.database
+      .from("tasks")
+      .select("*")
+      .eq("board_id", boardId);
+    const boardTasks = ((boardTasksQuery.data ?? []) as Record<string, unknown>[]) ?? [];
+
     const { error } = await insforge.database
       .from("boards")
       .delete()
@@ -432,6 +452,7 @@ export function useKanbanLogic() {
       .eq("user_id", user.id);
     if (error) {
       setTaskError(error.message);
+      toast({ title: "Error al eliminar el tablero", description: error.message, variant: "error" });
       return;
     }
     const nextBoards = boards.filter((board) => board.id !== boardId);
@@ -445,6 +466,64 @@ export function useKanbanLogic() {
         setTasks([]);
       }
     }
+    toast({
+      title: "Tablero eliminado",
+      description: boardToDelete?.name,
+      variant: "success",
+      duration: 6000,
+      action: {
+        label: "Deshacer",
+        onClick: () => void undoDeleteBoard(boardToDelete, boardTasks),
+      },
+    });
+  }
+
+  async function undoDeleteBoard(boardToDelete?: Board, boardTasks: Record<string, unknown>[] = []) {
+    if (!insforge || !user || !boardToDelete) return;
+    const { data, error } = await insforge.database
+      .from("boards")
+      .insert([{ user_id: user.id, name: boardToDelete.name }])
+      .select();
+    if (error) {
+      setTaskError(error.message);
+      toast({ title: "No se pudo restaurar el tablero", description: error.message, variant: "error" });
+      return;
+    }
+    const restoredBoard = toSafeBoards(data)[0];
+    if (!restoredBoard) return;
+    setBoards((prev) => [...prev, restoredBoard]);
+    setSelectedBoardId(restoredBoard.id);
+
+    if (boardTasks.length > 0) {
+      const restoredTasks = boardTasks.map((task) => ({
+        user_id: user.id,
+        board_id: restoredBoard.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        due_date: task.due_date,
+        checklist: task.checklist,
+        position: task.position,
+      }));
+      const { data: restoredTasksData, error: restoredTasksError } = await insforge.database
+        .from("tasks")
+        .insert(restoredTasks)
+        .select();
+      if (restoredTasksError) {
+        setTaskError(restoredTasksError.message);
+        toast({
+          title: "Tablero restaurado, tareas no",
+          description: restoredTasksError.message,
+          variant: "error",
+        });
+        return;
+      }
+      setTasks(toSafeTasks(restoredTasksData));
+    } else {
+      setTasks([]);
+    }
+    toast({ title: "Tablero restaurado", variant: "success" });
   }
 
   async function handleCreateTask(event: FormEvent<HTMLFormElement> | TaskStatus | QuickTaskInput) {
@@ -496,6 +575,7 @@ export function useKanbanLogic() {
     }
 
     setTasks((prev) => [...prev, ...toSafeTasks(data)]);
+    toast({ title: "Tarea creada", description: title, variant: "success" });
     
     if (!isDataObj && !isStatusString) {
       setNewTaskTitle("");
@@ -570,7 +650,7 @@ export function useKanbanLogic() {
     else setIsGeneratingEditingDescription(false);
   }
 
-  async function updateTask(taskId: string, update: Partial<Task>) {
+  async function updateTask(taskId: string, update: Partial<Task>, options?: { silent?: boolean }) {
     if (!insforge || !user) return;
     const dbUpdate: Record<string, unknown> = {};
     if (typeof update.title === "string") dbUpdate.title = update.title.trim();
@@ -588,15 +668,20 @@ export function useKanbanLogic() {
       .select();
     if (error) {
       setTaskError(error.message);
+      toast({ title: "Error al actualizar la tarea", description: error.message, variant: "error" });
       return;
     }
     const updated = toSafeTasks(data)[0];
     if (!updated) return;
     setTasks((prev) => prev.map((task) => (task.id === taskId ? updated : task)));
+    if (!options?.silent) {
+      toast({ title: "Tarea actualizada", description: updated.title, variant: "success" });
+    }
   }
 
   async function handleDeleteTask(taskId: string) {
     if (!insforge || !user) return;
+    const deletedTask = tasks.find((task) => task.id === taskId);
     const { error } = await insforge.database
       .from("tasks")
       .delete()
@@ -604,9 +689,50 @@ export function useKanbanLogic() {
       .eq("user_id", user.id);
     if (error) {
       setTaskError(error.message);
+      toast({ title: "Error al eliminar la tarea", description: error.message, variant: "error" });
       return;
     }
     setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    toast({
+      title: "Tarea eliminada",
+      description: deletedTask?.title,
+      variant: "success",
+      duration: 5000,
+      action: {
+        label: "Deshacer",
+        onClick: () => void undoDeleteTask(deletedTask),
+      },
+    });
+  }
+
+  async function undoDeleteTask(deletedTask?: Task) {
+    if (!insforge || !user || !deletedTask) return;
+    const { data, error } = await insforge.database
+      .from("tasks")
+      .insert([
+        {
+          user_id: deletedTask.user_id,
+          board_id: deletedTask.board_id,
+          title: deletedTask.title,
+          description: deletedTask.description,
+          status: deletedTask.status,
+          priority: deletedTask.priority,
+          due_date: deletedTask.due_date,
+          checklist: deletedTask.checklist,
+          position: deletedTask.position,
+        },
+      ])
+      .select();
+    if (error) {
+      setTaskError(error.message);
+      toast({ title: "No se pudo restaurar la tarea", description: error.message, variant: "error" });
+      return;
+    }
+    const restored = toSafeTasks(data)[0];
+    if (restored) {
+      setTasks((prev) => [...prev, restored]);
+      toast({ title: "Tarea restaurada", variant: "success" });
+    }
   }
 
   function openEditor(task: Task) {
@@ -677,7 +803,7 @@ export function useKanbanLogic() {
     const nextChecklist = task.checklist.map((item) =>
       item.id === itemId ? { ...item, done: !item.done } : item,
     );
-    await updateTask(taskId, { checklist: nextChecklist });
+    await updateTask(taskId, { checklist: nextChecklist }, { silent: true });
   }
 
   return {

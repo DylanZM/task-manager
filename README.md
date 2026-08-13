@@ -12,6 +12,8 @@ A modern, real-time Kanban board for managing tasks with drag-and-drop, AI-power
 - **AI descriptions** — auto-generate task descriptions from the title
 - **Real-time sync** — updates reflect instantly across all open sessions
 - **Per-user isolation** — your data stays yours with row-level security
+- **Dark mode** — light/dark theme with system preference and manual toggle
+- **Delete protection** — confirmation dialogs and undo toasts for board/task deletions
 
 ## Tech Stack
 
