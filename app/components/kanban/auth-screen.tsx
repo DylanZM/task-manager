@@ -8,20 +8,6 @@ import { Card, Badge } from "@/app/components/ui/card-badge";
 
 type AuthMode = "login" | "register";
 
-const GitHubIcon = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    className={className}
-    aria-hidden="true"
-  >
-    <path
-      d="M12 .5C5.648.5.5 5.648.5 12c0 5.082 3.292 9.387 7.86 10.91.575.106.785-.25.785-.556 0-.273-.01-.996-.015-1.954-3.197.695-3.872-1.54-3.872-1.54-.523-1.328-1.278-1.682-1.278-1.682-1.045-.714.079-.7.079-.7 1.155.082 1.762 1.187 1.762 1.187 1.026 1.758 2.692 1.25 3.348.956.104-.743.402-1.25.73-1.537-2.552-.29-5.238-1.276-5.238-5.682 0-1.255.448-2.282 1.183-3.087-.119-.29-.512-1.46.113-3.045 0 0 .965-.309 3.163 1.179A10.98 10.98 0 0 1 12 6.038c.973.004 1.953.132 2.868.388 2.197-1.488 3.161-1.179 3.161-1.179.626 1.585.233 2.755.114 3.045.737.805 1.182 1.832 1.182 3.087 0 4.417-2.69 5.388-5.252 5.673.413.355.781 1.058.781 2.133 0 1.54-.014 2.781-.014 3.159 0 .309.207.668.79.555C20.21 21.384 23.5 17.08 23.5 12 23.5 5.648 18.352.5 12 .5z"
-      fill="currentColor"
-    />
-  </svg>
-);
-
 const GoogleIcon = ({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -63,12 +49,12 @@ type Props = {
   authMessage: string;
   authError: string;
   isSubmittingAuth: boolean;
-  oauthLoadingProvider: "github" | "google" | null;
-  oauthProviders: Array<"github" | "google">;
+  oauthLoadingProvider: "google" | null;
+  oauthProviders: Array<"google">;
   onRegister: (event: React.FormEvent<HTMLFormElement>) => void;
   onLogin: (event: React.FormEvent<HTMLFormElement>) => void;
   onVerifyCode: (event: React.FormEvent<HTMLFormElement>) => void;
-  onOAuth: (provider: "github" | "google") => void;
+  onOAuth: (provider: "google") => void;
 };
 
 export function AuthScreen({
@@ -93,7 +79,6 @@ export function AuthScreen({
   onVerifyCode,
   onOAuth,
 }: Props) {
-  const isGithubLoading = oauthLoadingProvider === "github";
   const isGoogleLoading = oauthLoadingProvider === "google";
   const isAnyOAuthLoading = Boolean(oauthLoadingProvider);
 
@@ -241,20 +226,7 @@ export function AuthScreen({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    {oauthProviders.includes("github") && (
-                      <Button
-                        variant="outline"
-                        type="button"
-                        isLoading={isGithubLoading}
-                        onClick={() => onOAuth("github")}
-                        disabled={isAnyOAuthLoading || isSubmittingAuth}
-                        className="h-12 [&>span]:inline-flex [&>span]:items-center [&>span]:gap-2 [&>span]:whitespace-nowrap [&>span]:leading-none"
-                      >
-                        <GitHubIcon className="h-5 w-5 shrink-0" />
-                        GitHub
-                      </Button>
-                    )}
+                  <div className="grid grid-cols-1 gap-3">
                     {oauthProviders.includes("google") && (
                       <Button
                         variant="outline"

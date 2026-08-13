@@ -68,8 +68,7 @@ export default function RegisterPage() {
       isSubmittingAuth={isSubmittingAuth}
       oauthLoadingProvider={oauthLoadingProvider}
       oauthProviders={authConfig.oAuthProviders.filter(
-        (provider): provider is "github" | "google" =>
-          provider === "github" || provider === "google",
+        (provider): provider is "google" => provider === "google",
       )}
       onRegister={handleRegister}
       onLogin={handleLogin}

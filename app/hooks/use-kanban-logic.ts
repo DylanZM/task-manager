@@ -32,7 +32,7 @@ export function useKanbanLogic() {
   const [authMessage, setAuthMessage] = useState("");
   const [authError, setAuthError] = useState(insforgeInit.error);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
-  const [oauthLoadingProvider, setOAuthLoadingProvider] = useState<"github" | "google" | null>(null);
+  const [oauthLoadingProvider, setOAuthLoadingProvider] = useState<"google" | null>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -104,7 +104,9 @@ export function useKanbanLogic() {
         verifyEmailMethod: config.verifyEmailMethod === "link" ? "link" : "code",
         resetPasswordMethod: config.resetPasswordMethod === "code" ? "code" : "link",
         oAuthProviders: Array.isArray(config.oAuthProviders)
-          ? config.oAuthProviders.filter((provider): provider is string => typeof provider === "string")
+          ? config.oAuthProviders.filter(
+              (provider): provider is string => typeof provider === "string" && provider === "google",
+            )
           : DEFAULT_AUTH_CONFIG.oAuthProviders,
       });
     } catch {
@@ -362,7 +364,7 @@ export function useKanbanLogic() {
     }
   }
 
-  async function handleOAuthSignIn(provider: "github" | "google") {
+  async function handleOAuthSignIn(provider: "google") {
     if (!insforge) return;
     setAuthError("");
     setAuthMessage("");
