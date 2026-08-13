@@ -679,6 +679,35 @@ export function useKanbanLogic() {
     }
   }
 
+  async function moveTaskStatus(taskId: string, status: TaskStatus) {
+    if (!insforge || !user || !selectedBoardId) return;
+    const previous = tasks.find((task) => task.id === taskId);
+    if (!previous || previous.status === status) return;
+    const nextPosition =
+      tasks.filter((task) => task.status === status).reduce((max, task) => Math.max(max, task.position), 0) + 1;
+
+    setTasks((prev) =>
+      prev.map((task) => (task.id === taskId ? { ...task, status, position: nextPosition } : task)),
+    );
+
+    const { data, error } = await insforge.database
+      .from("tasks")
+      .update({ status, position: nextPosition })
+      .eq("id", taskId)
+      .eq("user_id", user.id)
+      .select();
+    if (error) {
+      setTaskError(error.message);
+      toast({ title: "Error al mover la tarea", description: error.message, variant: "error" });
+      await loadTasks(insforge, user.id, selectedBoardId);
+      return;
+    }
+    const updated = toSafeTasks(data)[0];
+    if (updated) {
+      setTasks((prev) => prev.map((task) => (task.id === taskId ? updated : task)));
+    }
+  }
+
   async function handleDeleteTask(taskId: string) {
     if (!insforge || !user) return;
     const deletedTask = tasks.find((task) => task.id === taskId);
@@ -886,6 +915,7 @@ export function useKanbanLogic() {
     handleCreateTask,
     generateTaskDescription,
     updateTask,
+    moveTaskStatus,
     handleDeleteTask,
     openEditor,
     saveEditor,

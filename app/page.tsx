@@ -49,7 +49,7 @@ export default function Home() {
     handleDeleteBoard,
     handleCreateTask,
     generateTaskDescription,
-    updateTask,
+    moveTaskStatus,
     handleDeleteTask,
     openEditor,
     saveEditor,
@@ -124,7 +124,7 @@ export default function Home() {
             onSaveEditor={saveEditor}
             onCloseEditor={() => setEditingTaskId(null)}
             onGenerateEditingDescription={() => void generateTaskDescription("edit")}
-            onUpdateTaskStatus={(taskId, status) => void updateTask(taskId, { status }, { silent: true })}
+            onUpdateTaskStatus={(taskId, status) => void moveTaskStatus(taskId, status)}
             onOpenEditor={openEditor}
             onDeleteTask={(taskId) => void handleDeleteTask(taskId)}
             onAiGenerate={handleAiGenerate}
