@@ -12,6 +12,7 @@ import { Input } from "@/app/components/ui/form";
 import { Card, Badge } from "@/app/components/ui/card-badge";
 import { ConfirmDialog } from "@/app/components/ui/confirm-dialog";
 import { useTheme } from "@/app/hooks/use-theme";
+import { LIMITS } from "@/lib/validation";
 
 type Props = {
   boards: Board[];
@@ -115,6 +116,7 @@ export function BoardSidebar({
               value={newBoardName}
               onChange={(event) => setNewBoardName(event.target.value)}
               placeholder="Project name..."
+              maxLength={LIMITS.boardNameMaxLength}
               className="pr-12 h-10 bg-zinc-50/50 border-zinc-200/50 focus:bg-white dark:bg-zinc-950/60 dark:border-zinc-800 dark:focus:bg-zinc-950"
             />
             <Button

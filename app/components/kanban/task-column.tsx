@@ -9,6 +9,7 @@ import { Card, Badge } from "@/app/components/ui/card-badge";
 import { Button } from "@/app/components/ui/button";
 import { Input, Textarea } from "@/app/components/ui/form";
 import { useState } from "react";
+import { LIMITS } from "@/lib/validation";
 
 interface TaskColumnProps {
   status: TaskStatus;
@@ -154,6 +155,7 @@ export function TaskColumn({
                 placeholder="Task title..."
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
+                maxLength={LIMITS.taskTitleMaxLength}
                 className="h-9 text-sm bg-white font-bold"
               />
               <div className="relative group">
@@ -161,6 +163,7 @@ export function TaskColumn({
                   placeholder="Description (optional)..."
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
+                  maxLength={LIMITS.taskDescriptionMaxLength}
                   className="text-xs bg-white min-h-[80px] pr-10 resize-none"
                 />
                 <Button

@@ -6,6 +6,7 @@ import { TaskChecklistItem, TaskPriority, TaskStatus } from "@/lib/task-types";
 import { Button } from "@/app/components/ui/button";
 import { Card } from "@/app/components/ui/card-badge";
 import { Input, Select, Textarea } from "@/app/components/ui/form";
+import { LIMITS } from "@/lib/validation";
 
 type Props = {
   isOpen: boolean;
@@ -75,6 +76,7 @@ export function TaskEditorModal({
             required
             value={editingTitle}
             onChange={(event) => setEditingTitle(event.target.value)}
+            maxLength={LIMITS.taskTitleMaxLength}
             className="border-zinc-200 font-bold"
           />
 
@@ -83,6 +85,7 @@ export function TaskEditorModal({
               label="Description"
               value={editingDescription}
               onChange={(event) => setEditingDescription(event.target.value)}
+              maxLength={LIMITS.taskDescriptionMaxLength}
               className="min-h-[140px] pb-12"
             />
             <Button
@@ -132,6 +135,7 @@ export function TaskEditorModal({
                 placeholder="New subtask..."
                 value={newChecklistText}
                 onChange={(event) => setNewChecklistText(event.target.value)}
+                maxLength={LIMITS.checklistTextMaxLength}
                 className="h-9 text-sm"
               />
               <Button

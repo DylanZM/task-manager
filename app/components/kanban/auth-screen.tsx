@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/form";
 import { Card, Badge } from "@/app/components/ui/card-badge";
+import { LIMITS } from "@/lib/validation";
 
 type AuthMode = "login" | "register";
 
@@ -148,6 +149,9 @@ export function AuthScreen({
                 }
                 placeholder="123456"
                 type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={8}
                 className="text-center text-lg tracking-[0.5em] font-mono shadow-none focus:ring-0"
               />
               <Button
@@ -173,6 +177,7 @@ export function AuthScreen({
                     }
                     placeholder="John Doe"
                     type="text"
+                    maxLength={LIMITS.displayNameMaxLength}
                     className="shadow-none focus:ring-0"
                   />
                 )}
@@ -186,6 +191,7 @@ export function AuthScreen({
                     setEmail(e.target.value)
                   }
                   placeholder="name@example.com"
+                  maxLength={LIMITS.emailMaxLength}
                   className="shadow-none focus:ring-0"
                 />
                 <Input
@@ -193,6 +199,7 @@ export function AuthScreen({
                   required
                   type="password"
                   minLength={minPasswordLength}
+                  maxLength={LIMITS.passwordMaxLength}
                   autoComplete={
                     authMode === "login" ? "current-password" : "new-password"
                   }

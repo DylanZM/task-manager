@@ -14,6 +14,22 @@ import {
   resolveTaskDescriptionModel,
 } from "@/lib/insforge/ai-task-description";
 import { useBoardRealtimeSync } from "@/app/hooks/kanban/use-board-realtime-sync";
+import {
+  isValidBoardName,
+  isValidChecklist,
+  isValidDescription,
+  isValidDisplayName,
+  isValidDueDate,
+  isValidEmail,
+  isValidPassword,
+  isValidTaskTitle,
+  isTaskPriorityValue,
+  isTaskStatusValue,
+  LIMITS,
+  sanitizeText,
+  truncateForAi,
+  validateAvatarFile,
+} from "@/lib/validation";
 
 export function useKanbanLogic() {
   const [insforgeInit] = useState(() => {
@@ -209,13 +225,24 @@ export function useKanbanLogic() {
 
   async function handleUpdateProfile(updates: { display_name?: string | null }, avatarFile?: File | null) {
     if (!insforge || !user) return;
-    setIsUpdatingProfile(true);
     setTaskError("");
+    const displayNameValue = updates.display_name?.trim() ?? null;
+    if (!isValidDisplayName(displayNameValue)) {
+      setTaskError(`El nombre no puede superar los ${LIMITS.displayNameMaxLength} caracteres.`);
+      return;
+    }
+    const avatarError = await validateAvatarFile(avatarFile);
+    if (avatarError) {
+      setTaskError(avatarError);
+      toast({ title: "Error al subir el avatar", description: avatarError, variant: "error" });
+      return;
+    }
+    setIsUpdatingProfile(true);
     const dbUpdate: Record<string, unknown> = {};
-    if (updates.display_name !== undefined) dbUpdate.display_name = updates.display_name?.trim() || null;
+    if (updates.display_name !== undefined) dbUpdate.display_name = displayNameValue;
 
     if (avatarFile) {
-      const ext = avatarFile.name.split(".").pop() || "jpg";
+      const ext = avatarFile.name.split(".").pop()?.toLowerCase() || "jpg";
       const filePath = `${user.id}/avatar.${ext}`;
       const { data: uploadData, error: uploadError } = await insforge.storage
         .from("avatars")
@@ -298,11 +325,29 @@ export function useKanbanLogic() {
     if (!insforge) return;
     setAuthError("");
     setAuthMessage("");
+
+    const trimmedEmail = email.trim();
+    const trimmedName = displayName.trim();
+    if (!isValidEmail(trimmedEmail)) {
+      setAuthError("Ingresa un correo electrónico válido.");
+      return;
+    }
+    if (!isValidPassword(password, authConfig.passwordMinLength)) {
+      setAuthError(
+        `La contraseña debe tener entre ${authConfig.passwordMinLength} y ${LIMITS.passwordMaxLength} caracteres.`,
+      );
+      return;
+    }
+    if (!isValidDisplayName(trimmedName)) {
+      setAuthError(`El nombre no puede superar los ${LIMITS.displayNameMaxLength} caracteres.`);
+      return;
+    }
+
     setIsSubmittingAuth(true);
     const { data, error } = await insforge.auth.signUp({
-      email,
+      email: trimmedEmail,
       password,
-      name: displayName || undefined,
+      name: trimmedName || undefined,
       redirectTo: `${window.location.origin}/`,
     });
     setIsSubmittingAuth(false);
@@ -331,6 +376,11 @@ export function useKanbanLogic() {
     event.preventDefault();
     if (!insforge || !pendingVerificationEmail) return;
     setAuthError("");
+    const code = verificationCode.trim();
+    if (!/^\d{4,8}$/.test(code)) {
+      setAuthError("Ingresa un código de verificación válido.");
+      return;
+    }
     setIsSubmittingAuth(true);
     const { data, error } = await insforge.auth.verifyEmail({
       email: pendingVerificationEmail,
@@ -358,8 +408,17 @@ export function useKanbanLogic() {
     if (!insforge) return;
     setAuthError("");
     setAuthMessage("");
+    const trimmedEmail = email.trim();
+    if (!isValidEmail(trimmedEmail)) {
+      setAuthError("Ingresa un correo electrónico válido.");
+      return;
+    }
+    if (!password) {
+      setAuthError("Ingresa tu contraseña.");
+      return;
+    }
     setIsSubmittingAuth(true);
-    const { data, error } = await insforge.auth.signInWithPassword({ email, password });
+    const { data, error } = await insforge.auth.signInWithPassword({ email: trimmedEmail, password });
     setIsSubmittingAuth(false);
     if (error) {
       setAuthError(error.message);
@@ -409,8 +468,11 @@ export function useKanbanLogic() {
   async function handleCreateBoard(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!insforge || !user) return;
-    const boardName = newBoardName.trim();
-    if (!boardName) return;
+    const boardName = sanitizeText(newBoardName).trim();
+    if (!isValidBoardName(boardName)) {
+      setTaskError(`El nombre del tablero debe tener entre 1 y ${LIMITS.boardNameMaxLength} caracteres.`);
+      return;
+    }
     setIsCreatingBoard(true);
     const { data, error } = await insforge.database
       .from("boards")
@@ -550,20 +612,35 @@ export function useKanbanLogic() {
     const finalPriority = isDataObj ? dataEvent?.priority : newTaskPriority;
     const finalDueDate = isFormEvent ? newTaskDueDate : null;
 
-    const title = finalTitle.trim();
-    if (!title) return;
+    const title = sanitizeText(finalTitle).trim();
+    const description = finalDescription ? sanitizeText(finalDescription).trim() : null;
+    if (!isValidTaskTitle(title)) {
+      setTaskError(`El título de la tarea debe tener entre 1 y ${LIMITS.taskTitleMaxLength} caracteres.`);
+      return;
+    }
+    if (!isValidDescription(description)) {
+      setTaskError(`La descripción no puede superar los ${LIMITS.taskDescriptionMaxLength} caracteres.`);
+      return;
+    }
+    const status = isTaskStatusValue(finalStatus) ? finalStatus : "todo";
+    const priority = isTaskPriorityValue(finalPriority) ? finalPriority : "medium";
+    const dueDate = finalDueDate ? new Date(finalDueDate).toISOString() : null;
+    if (!isValidDueDate(dueDate)) {
+      setTaskError("La fecha de vencimiento no es válida.");
+      return;
+    }
 
     const nextPosition =
-      tasks.filter((task) => task.status === finalStatus).reduce((max, task) => Math.max(max, task.position), 0) + 1;
+      tasks.filter((task) => task.status === status).reduce((max, task) => Math.max(max, task.position), 0) + 1;
 
     const payload = {
       user_id: user.id,
       board_id: selectedBoardId,
       title,
-      description: finalDescription?.trim() || null,
-      status: finalStatus,
-      priority: finalPriority || "medium",
-      due_date: finalDueDate ? new Date(finalDueDate).toISOString() : null,
+      description,
+      status,
+      priority,
+      due_date: dueDate,
       checklist: [],
       position: nextPosition,
     };
@@ -629,9 +706,9 @@ export function useKanbanLogic() {
   }
 
   async function generateTaskDescription(mode: "new" | "edit") {
-    const title = (mode === "new" ? newTaskTitle : editingTitle).trim();
+    const title = truncateForAi(mode === "new" ? newTaskTitle : editingTitle);
     if (!title) {
-      setTaskError("Write a title to generate the AI description.");
+      setTaskError("Escribe un título para generar la descripción con IA.");
       return;
     }
 
@@ -653,13 +730,52 @@ export function useKanbanLogic() {
   async function updateTask(taskId: string, update: Partial<Task>, options?: { silent?: boolean }) {
     if (!insforge || !user) return;
     const dbUpdate: Record<string, unknown> = {};
-    if (typeof update.title === "string") dbUpdate.title = update.title.trim();
-    if (update.description !== undefined) dbUpdate.description = update.description?.trim() || null;
-    if (update.status) dbUpdate.status = update.status;
-    if (update.priority) dbUpdate.priority = update.priority;
+    if (typeof update.title === "string") {
+      const title = sanitizeText(update.title).trim();
+      if (!isValidTaskTitle(title)) {
+        setTaskError(`El título de la tarea debe tener entre 1 y ${LIMITS.taskTitleMaxLength} caracteres.`);
+        return;
+      }
+      dbUpdate.title = title;
+    }
+    if (update.description !== undefined) {
+      const description = update.description ? sanitizeText(update.description).trim() : null;
+      if (!isValidDescription(description)) {
+        setTaskError(`La descripción no puede superar los ${LIMITS.taskDescriptionMaxLength} caracteres.`);
+        return;
+      }
+      dbUpdate.description = description;
+    }
+    if (update.status !== undefined && !isTaskStatusValue(update.status)) {
+      setTaskError("El estado de la tarea no es válido.");
+      return;
+    }
+    if (update.status !== undefined) dbUpdate.status = update.status;
+    if (update.priority !== undefined && !isTaskPriorityValue(update.priority)) {
+      setTaskError("La prioridad de la tarea no es válida.");
+      return;
+    }
+    if (update.priority !== undefined) dbUpdate.priority = update.priority;
     if (update.position !== undefined) dbUpdate.position = update.position;
-    if (update.due_date !== undefined) dbUpdate.due_date = update.due_date;
-    if (update.checklist !== undefined) dbUpdate.checklist = update.checklist;
+    if (update.due_date !== undefined) {
+      if (!isValidDueDate(update.due_date)) {
+        setTaskError("La fecha de vencimiento no es válida.");
+        return;
+      }
+      dbUpdate.due_date = update.due_date;
+    }
+    if (update.checklist !== undefined) {
+      if (!isValidChecklist(update.checklist)) {
+        setTaskError(
+          `El checklist no es válido (máximo ${LIMITS.checklistMaxItems} elementos, ${LIMITS.checklistTextMaxLength} caracteres por elemento).`,
+        );
+        return;
+      }
+      dbUpdate.checklist = update.checklist.map((item) => ({
+        ...item,
+        text: sanitizeText(item.text).trim(),
+      }));
+    }
     const { data, error } = await insforge.database
       .from("tasks")
       .update(dbUpdate)
@@ -811,8 +927,16 @@ export function useKanbanLogic() {
   }
 
   function addEditingChecklistItem(text: string) {
-    const value = text.trim();
+    const value = sanitizeText(text).trim();
     if (!value) return;
+    if (value.length > LIMITS.checklistTextMaxLength) {
+      setTaskError(`Cada subtarea no puede superar los ${LIMITS.checklistTextMaxLength} caracteres.`);
+      return;
+    }
+    if (editingChecklist.length >= LIMITS.checklistMaxItems) {
+      setTaskError(`No puedes agregar más de ${LIMITS.checklistMaxItems} subtareas.`);
+      return;
+    }
     setEditingChecklist((prev) => [...prev, createChecklistItem(value, prev)]);
   }
 

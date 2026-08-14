@@ -7,6 +7,7 @@ import { useKanbanLogic } from "@/app/hooks/use-kanban-logic";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/form";
 import { Card } from "@/app/components/ui/card-badge";
+import { LIMITS, validateAvatarFile } from "@/lib/validation";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState("");
 
   const avatarUrl = avatarPreview || profile?.avatar_url || user?.avatar_url || null;
   const nameValue = displayName || profile?.display_name || user?.name || "";
@@ -49,9 +51,18 @@ export default function ProfilePage() {
     setAvatarFile(null);
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const error = await validateAvatarFile(file);
+    if (error) {
+      setAvatarError(error);
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      e.target.value = "";
+      return;
+    }
+    setAvatarError("");
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -111,7 +122,7 @@ export default function ProfilePage() {
               )}
               <label className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-zinc-200 text-zinc-600 shadow-sm hover:bg-zinc-300 dark:border-zinc-900 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600">
                 <Camera className="h-3.5 w-3.5" />
-                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                <input type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" className="hidden" onChange={handleAvatarChange} />
               </label>
             </div>
             <div>
@@ -128,6 +139,7 @@ export default function ProfilePage() {
               value={nameValue}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your display name"
+              maxLength={LIMITS.displayNameMaxLength}
             />
 
             <Input
@@ -135,6 +147,12 @@ export default function ProfilePage() {
               value={user.email}
               disabled
             />
+
+            {avatarError && (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+                {avatarError}
+              </p>
+            )}
 
             {taskError && (
               <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
